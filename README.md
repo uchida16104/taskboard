@@ -30,7 +30,7 @@ Visualize ideas as tasks.
 * [Design Notes](https://github.com/Uchida16104/TaskList/wiki/Design-Notes)
 * [Project Rules](https://github.com/Uchida16104/TaskList/wiki/Project-Rules)
 
-<div id="prompt"><h4>AI Prompt</h4>
+<div id="prompt"><h4><a href="https://uchida16104.github.io/Task-Board/wiki/">AI Prompt</a></h4>
 
 * [ChatGPT](https://github.com/Uchida16104/Task-Board/wiki/Prompt-for-ChatGPT)
 * [Claude](https://github.com/Uchida16104/Task-Board/wiki/Prompt-for-Claude)
