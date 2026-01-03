@@ -23,9 +23,8 @@ jobs:
             const oneWeek = 7 * 24 * 60 * 60 * 1000;
             const oneMonth = 30 * 24 * 60 * 60 * 1000;
 
-            const partialProjectName = "Task Board";
+            const partialProjectName = "TaskBoard";
 
-            // リポジトリ内の Project v2 を取得
             const projects = await github.graphql(`
               query($owner: String!, $repo: String!) {
                 repository(owner:$owner, name:$repo) {
