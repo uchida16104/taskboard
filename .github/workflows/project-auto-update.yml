@@ -1,4 +1,4 @@
-name: Projects v2 Auto Update & Progress Monitor (Auto-ID)
+name: Projects v2 Auto Update & Progress Monitor (Auto-Detect)
 
 on:
   schedule:
@@ -23,7 +23,7 @@ jobs:
             const oneWeek = 7 * 24 * 60 * 60 * 1000;
             const oneMonth = 30 * 24 * 60 * 60 * 1000;
 
-            const targetProjectName = "Task Board";
+            const partialProjectName = "Task Board";
 
             const projects = await github.graphql(`
               query($owner: String!, $repo: String!) {
@@ -62,8 +62,15 @@ jobs:
               }
             `, { owner: context.repo.owner, repo: context.repo.repo });
 
-            const project = projects.repository.projectsV2.nodes.find(p => p.title === targetProjectName);
-            if(!project) throw new Error(`Project v2 named "${targetProjectName}" not found`);
+            console.log("Available Project v2 titles:");
+            for(const p of projects.repository.projectsV2.nodes) {
+              console.log(`- "${p.title}"`);
+            }
+
+            const project = projects.repository.projectsV2.nodes.find(
+              p => p.title.toLowerCase().includes(partialProjectName.toLowerCase())
+            );
+            if(!project) throw new Error(`No Project v2 found containing "${partialProjectName}"`);
 
             const PROJECT_ID = project.id;
             const field = project.fields.nodes.find(f => f.name === "Status");
