@@ -17,10 +17,10 @@ jobs:
 
             await github.graphql(`
               mutation CloseDiscussion($id: ID!) {
-                closeDiscussion(input: {discussionId: $id}) {
+                closeDiscussion(input: { discussionId: $id }) {
                   discussion {
                     id
-                    state
+                    isClosed
                   }
                 }
               }
