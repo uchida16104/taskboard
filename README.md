@@ -21,6 +21,9 @@ Visualize ideas as tasks.
 
 5. Please move task tickets according to their progress status.
 
+## Caution
+* ***Not to open Issues***
+
 ## Reference
 ### Wiki
 * [Design Notes](https://github.com/Uchida16104/TaskList/wiki/Design-Notes)
