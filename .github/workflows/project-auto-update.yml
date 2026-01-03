@@ -1,4 +1,4 @@
-name: Projects v2 Auto Update & Progress Monitor
+name: Projects v2 Auto Update & Progress Monitor (Auto-ID)
 
 on:
   schedule:
@@ -22,28 +22,36 @@ jobs:
             const oneWeek = 7 * 24 * 60 * 60 * 1000;
             const oneMonth = 30 * 24 * 60 * 60 * 1000;
 
-            const projectNumber = 5;
+            const targetProjectName = "Task Board";
 
-            const projectData = await github.graphql(`
-              query($owner: String!, $repo: String!, $number: Int!) {
-                repository(owner: $owner, name: $repo) {
-                  projectV2(number: $number) {
-                    id
-                    fields(first: 20) {
-                      nodes {
-                        ... on ProjectV2Field {
-                          id
-                          name
+            const projects = await github.graphql(`
+              query($owner: String!, $repo: String!) {
+                repository(owner:$owner, name:$repo) {
+                  projectsV2(first: 20) {
+                    nodes {
+                      id
+                      number
+                      title
+                      fields(first: 20) {
+                        nodes {
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options {
+                              id
+                              name
+                            }
+                          }
                         }
                       }
-                    }
-                    items(first: 100) {
-                      nodes {
-                        id
-                        content {
-                          ... on Issue {
-                            number
-                            updatedAt
+                      items(first: 100) {
+                        nodes {
+                          id
+                          content {
+                            ... on Issue {
+                              number
+                              updatedAt
+                            }
                           }
                         }
                       }
@@ -51,79 +59,67 @@ jobs:
                   }
                 }
               }
-            `, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              number: projectNumber
-            });
+            `, { owner: context.repo.owner, repo: context.repo.repo });
 
-            const projectId = projectData.repository.projectV2.id;
-            const items = projectData.repository.projectV2.items.nodes;
+            const project = projects.repository.projectsV2.nodes.find(p => p.title === targetProjectName);
+            if(!project) throw new Error(`Project v2 named "${targetProjectName}" not found`);
 
-            // Open issues
+            const PROJECT_ID = project.id;
+            const field = project.fields.nodes.find(f => f.name === "Status");
+            if(!field) throw new Error('Status field not found in Project v2');
+
+            const statusOptions = {};
+            for(const opt of field.options) {
+              statusOptions[opt.name] = opt.id;
+            }
+
             const issues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open'
             });
 
-            // Helper: issue → item mapping
             const itemMap = {};
-            for (const item of items) {
-              if (item.content) itemMap[item.content.number] = item.id;
+            for(const item of project.items.nodes) {
+              if(item.content) itemMap[item.content.number] = item.id;
             }
 
-            for (const issue of issues.data) {
+            for(const issue of issues.data) {
               const updated = new Date(issue.updated_at);
               const diff = now - updated;
 
               let itemId = itemMap[issue.number];
-              if (!itemId) {
+              if(!itemId) {
                 const addResp = await github.graphql(`
                   mutation($projectId: ID!, $contentId: ID!) {
                     addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
-                      item {
-                        id
-                      }
+                      item { id }
                     }
                   }
-                `, {
-                  projectId: projectId,
-                  contentId: issue.node_id
-                });
+                `, { projectId: PROJECT_ID, contentId: issue.node_id });
                 console.log(`Issue #${issue.number} added to Project v2`);
                 itemId = addResp.addProjectV2ItemById.item.id;
               }
 
               const labels = issue.labels.map(l => typeof l === 'string' ? l : l.name);
-              const field = projectData.repository.projectV2.fields.nodes.find(f => f.name === 'Status');
-              if (field) {
-                let statusValue;
-                if (labels.includes('in-progress')) statusValue = 'In Progress';
-                else if (labels.includes('done')) statusValue = 'Done';
-                else statusValue = 'Approved';
+              let statusValue = "Approved";
+              if(labels.includes("in-progress")) statusValue = "In Progress";
+              else if(labels.includes("done")) statusValue = "Done";
 
-                await github.graphql(`
-                  mutation($itemId: ID!, $fieldId: ID!, $value: String!) {
-                    updateProjectV2ItemFieldValue(input: {
-                      itemId: $itemId,
-                      fieldId: $fieldId,
-                      value: { singleSelectOptionId: $value }
-                    }) {
-                      projectV2Item {
-                        id
-                      }
-                    }
+              await github.graphql(`
+                mutation($itemId: ID!, $fieldId: ID!, $optionId: ID!) {
+                  updateProjectV2ItemFieldValue(input: {
+                    itemId: $itemId,
+                    fieldId: $fieldId,
+                    value: { singleSelectOptionId: $optionId }
+                  }) {
+                    projectV2Item { id }
                   }
-                `, {
-                  itemId: itemId,
-                  fieldId: field.id,
-                  value: statusValue
-                });
-                console.log(`Issue #${issue.number} set Status -> ${statusValue}`);
-              }
+                }
+              `, { itemId, fieldId: field.id, optionId: statusOptions[statusValue] });
+              console.log(`Issue #${issue.number} set Status -> ${statusValue}`);
 
-              if (diff >= oneWeek && diff < oneMonth) {
+              if(diff >= oneWeek && diff < oneMonth) {
                 await github.rest.issues.createComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
@@ -133,7 +129,7 @@ jobs:
                 console.log(`Alerted issue #${issue.number} due to 1 week inactivity`);
               }
 
-              if (diff >= oneMonth) {
+              if(diff >= oneMonth) {
                 await github.rest.issues.update({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
