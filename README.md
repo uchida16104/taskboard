@@ -3,7 +3,7 @@ Visualize ideas as tasks.
 
 ## Usage
 1. [Create new discussions for Ideas](https://github.com/Uchida16104/TaskList/discussions/new?category=ideas)
-2. Please select one of the following labels: “approved”, “rejected”. or “needs-review”. ***(Please set to add these label for the first time.)***
+2. Please select one of the following labels: “approved”, “rejected”. or “needs-review”. <br />***(Please set to add these label for the first time.)***
 3. The discussion will be, 
 * closed when you select "rejected". 
 * done nothing when you select "needs-review".
