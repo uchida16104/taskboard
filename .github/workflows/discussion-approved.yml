@@ -1,0 +1,38 @@
+name: Create issue from approved discussion
+
+on:
+  discussion:
+    types: [labeled]
+
+jobs:
+  create-issue:
+    if: github.event.label.name == 'approved'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const discussion = context.payload.discussion;
+
+            const body = `
+## Original Discussion
+${discussion.html_url}
+
+---
+
+## Content (Automatically Transcribed)
+${discussion.body}
+
+---
+
+## Related Wiki
+https://github.com/${context.repo.owner}/${context.repo.repo}/wiki/Design-Notes
+`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: discussion.title,
+              body: body
+            });
