@@ -1,4 +1,4 @@
-# TaskList
+# Task　Board
 Visualize ideas as tasks.
 
 ## Usage
