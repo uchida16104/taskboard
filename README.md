@@ -22,4 +22,4 @@ Visualize ideas as tasks.
 5. Please move task tickets according to their progress status.
 
 ## Developer
-by ***Hirotoshi Uchida***
+***Hirotoshi Uchida***
