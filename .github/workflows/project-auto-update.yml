@@ -1,4 +1,4 @@
-name: Projects v2 Auto Update & Progress Monitor (Auto-Detect)
+name: Projects v2 Auto Update & Progress Monitor
 
 on:
   schedule:
@@ -14,7 +14,7 @@ jobs:
   update-projects:
     runs-on: ubuntu-latest
     steps:
-      - name: Auto-update Projects v2 (Auto-Detect)
+      - name: Auto-update Projects v2
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -25,36 +25,48 @@ jobs:
 
             const partialProjectName = "Task Board";
 
-            let projects = await github.graphql(`
+            // リポジトリ内の Project v2 を取得
+            const projects = await github.graphql(`
               query($owner: String!, $repo: String!) {
                 repository(owner:$owner, name:$repo) {
                   projectsV2(first: 20) {
-                    nodes { id title fields(first:20){ nodes{ ... on ProjectV2SingleSelectField{ id name options{id name}}}} items(first:100){ nodes{ id content{ ... on Issue { number updatedAt } } } } }
+                    nodes {
+                      id
+                      title
+                      fields(first: 20) {
+                        nodes {
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options { id name }
+                          }
+                        }
+                      }
+                      items(first: 100) {
+                        nodes {
+                          id
+                          content {
+                            ... on Issue {
+                              number
+                              updatedAt
+                            }
+                          }
+                        }
+                      }
+                    }
                   }
                 }
               }
             `, { owner: context.repo.owner, repo: context.repo.repo });
 
-            let project = projects.repository.projectsV2.nodes.find(
+            console.log("Available Project v2 titles:");
+            for(const p of projects.repository.projectsV2.nodes) {
+              console.log(`- "${p.title}"`);
+            }
+
+            const project = projects.repository.projectsV2.nodes.find(
               p => p.title.toLowerCase().includes(partialProjectName.toLowerCase())
             );
-
-            if(!project) {
-              console.log(`Repository Project v2 not found. Searching Organization...`);
-              projects = await github.graphql(`
-                query($org: String!) {
-                  organization(login: $org) {
-                    projectsV2(first: 20) {
-                      nodes { id title fields(first:20){ nodes{ ... on ProjectV2SingleSelectField{ id name options{id name}}}} items(first:100){ nodes{ id content{ ... on Issue { number updatedAt } } } } }
-                    }
-                  }
-                }
-              `, { org: context.repo.owner });
-
-              project = projects.organization.projectsV2.nodes.find(
-                p => p.title.toLowerCase().includes(partialProjectName.toLowerCase())
-              );
-            }
 
             if(!project) throw new Error(`No Project v2 found containing "${partialProjectName}"`);
 
