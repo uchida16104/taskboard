@@ -14,7 +14,7 @@ jobs:
   update-projects:
     runs-on: ubuntu-latest
     steps:
-      - name: Auto-update Projects v2
+      - name: Auto-update Projects v2 (Auto-Detect)
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -23,63 +23,49 @@ jobs:
             const oneWeek = 7 * 24 * 60 * 60 * 1000;
             const oneMonth = 30 * 24 * 60 * 60 * 1000;
 
-            const partialProjectName = "Task_Board";
+            const partialProjectName = "Task Board";
 
-            const projects = await github.graphql(`
+            let projects = await github.graphql(`
               query($owner: String!, $repo: String!) {
                 repository(owner:$owner, name:$repo) {
                   projectsV2(first: 20) {
-                    nodes {
-                      id
-                      number
-                      title
-                      fields(first: 20) {
-                        nodes {
-                          ... on ProjectV2SingleSelectField {
-                            id
-                            name
-                            options {
-                              id
-                              name
-                            }
-                          }
-                        }
-                      }
-                      items(first: 100) {
-                        nodes {
-                          id
-                          content {
-                            ... on Issue {
-                              number
-                              updatedAt
-                            }
-                          }
-                        }
-                      }
-                    }
+                    nodes { id title fields(first:20){ nodes{ ... on ProjectV2SingleSelectField{ id name options{id name}}}} items(first:100){ nodes{ id content{ ... on Issue { number updatedAt } } } } }
                   }
                 }
               }
             `, { owner: context.repo.owner, repo: context.repo.repo });
 
-            console.log("Available Project v2 titles:");
-            for(const p of projects.repository.projectsV2.nodes) {
-              console.log(`- "${p.title}"`);
-            }
-
-            const project = projects.repository.projectsV2.nodes.find(
+            let project = projects.repository.projectsV2.nodes.find(
               p => p.title.toLowerCase().includes(partialProjectName.toLowerCase())
             );
+
+            if(!project) {
+              console.log(`Repository Project v2 not found. Searching Organization...`);
+              projects = await github.graphql(`
+                query($org: String!) {
+                  organization(login: $org) {
+                    projectsV2(first: 20) {
+                      nodes { id title fields(first:20){ nodes{ ... on ProjectV2SingleSelectField{ id name options{id name}}}} items(first:100){ nodes{ id content{ ... on Issue { number updatedAt } } } } }
+                    }
+                  }
+                }
+              `, { org: context.repo.owner });
+
+              project = projects.organization.projectsV2.nodes.find(
+                p => p.title.toLowerCase().includes(partialProjectName.toLowerCase())
+              );
+            }
+
             if(!project) throw new Error(`No Project v2 found containing "${partialProjectName}"`);
+
+            console.log(`Using Project v2: "${project.title}"`);
 
             const PROJECT_ID = project.id;
             const field = project.fields.nodes.find(f => f.name === "Status");
             if(!field) throw new Error('Status field not found in Project v2');
 
             const statusOptions = {};
-            for(const opt of field.options) {
-              statusOptions[opt.name] = opt.id;
-            }
+            for(const opt of field.options) statusOptions[opt.name] = opt.id;
 
             const issues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
@@ -88,16 +74,14 @@ jobs:
             });
 
             const itemMap = {};
-            for(const item of project.items.nodes) {
-              if(item.content) itemMap[item.content.number] = item.id;
-            }
+            for(const item of project.items.nodes) if(item.content) itemMap[item.content.number] = item.id;
 
-            for(const issue of issues.data) {
+            for(const issue of issues.data){
               const updated = new Date(issue.updated_at);
               const diff = now - updated;
 
               let itemId = itemMap[issue.number];
-              if(!itemId) {
+              if(!itemId){
                 const addResp = await github.graphql(`
                   mutation($projectId: ID!, $contentId: ID!) {
                     addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
@@ -127,7 +111,7 @@ jobs:
               `, { itemId, fieldId: field.id, optionId: statusOptions[statusValue] });
               console.log(`Issue #${issue.number} set Status -> ${statusValue}`);
 
-              if(diff >= oneWeek && diff < oneMonth) {
+              if(diff >= oneWeek && diff < oneMonth){
                 await github.rest.issues.createComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
@@ -137,7 +121,7 @@ jobs:
                 console.log(`Alerted issue #${issue.number} due to 1 week inactivity`);
               }
 
-              if(diff >= oneMonth) {
+              if(diff >= oneMonth){
                 await github.rest.issues.update({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
