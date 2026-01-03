@@ -1,0 +1,21 @@
+name: Close rejected discussion
+
+on:
+  discussion:
+    types: [labeled]
+
+jobs:
+  close-discussion:
+    if: github.event.label.name == 'rejected'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close discussion
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.discussions.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              discussion_number: context.payload.discussion.number,
+              state: 'closed'
+            });
