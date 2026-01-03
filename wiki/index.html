@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Task Board Prompts</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/alpinejs@latest/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-50 p-6 font-sans" x-data="promptsApp()">
+
+  <h1 class="text-2xl font-bold mb-6">GitHub Project Prompts</h1>
+
+  <!-- ボタン切り替え -->
+  <div class="mb-6 space-x-2">
+    <button class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            @click="select('chatgpt')">ChatGPT</button>
+    <button class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+            @click="select('claude')">Claude</button>
+    <button class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            @click="select('gemini')">Gemini</button>
+  </div>
+
+  <!-- プロンプト表示エリア -->
+  <div class="bg-white p-4 rounded shadow">
+    <pre class="bg-gray-100 p-3 rounded overflow-x-auto text-sm" x-text="currentPrompt"></pre>
+    <button class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            @click="copyPrompt">
+      Copy
+    </button>
+    <span x-show="copied" class="text-green-600 ml-2">Copied!</span>
+  </div>
+
+  <script>
+    function promptsApp() {
+      return {
+        copied: false,
+        currentPrompt: `You are a GitHub project assistant.
+
+Task:
+Create content for a GitHub Discussion.
+
+Target URL:
+https://github.com/Uchida16104/Task-Board/discussions/new?category=ideas
+
+Output format:
+
+Title:
+[Category of task]<clear English title>
+
+Body (Markdown):
+- Short summary
+- Problem statement
+- Proposed idea
+- Expected benefit
+- Notes
+
+At the end, add:
+"Generated via ChatGPT"
+
+Source text:
+Please write your own memo or idea`,
+        prompts: {
+          chatgpt: `You are a GitHub project assistant.
+
+Task:
+Create content for a GitHub Discussion.
+
+Target URL:
+https://github.com/Uchida16104/Task-Board/discussions/new?category=ideas
+
+Output format:
+
+Title:
+[Category of task]<clear English title>
+
+Body (Markdown):
+- Short summary
+- Problem statement
+- Proposed idea
+- Expected benefit
+- Notes
+
+At the end, add:
+"Generated via ChatGPT"
+
+Source text:
+Please write your own memo or idea`,
+          claude: `Act as a technical project planner.
+
+Generate a GitHub Discussion with:
+- [Category of task]<Clear title>
+- Markdown body with sections
+- Neutral and professional tone
+
+Input:
+Please write your own memo or idea`,
+          gemini: `You are helping manage a GitHub project.
+
+Please generate:
+1. [Category of task]<An English discussion title>
+2. A Markdown discussion body suitable for GitHub
+
+Be concise and structured.
+
+Content:
+Please write your own memo or idea`
+        },
+        select(name) {
+          this.currentPrompt = this.prompts[name];
+        },
+        copyPrompt() {
+          navigator.clipboard.writeText(this.currentPrompt)
+            .then(() => {
+              this.copied = true;
+              setTimeout(() => this.copied = false, 1500);
+            });
+        }
+      }
+    }
+  </script>
+
+</body>
+</html>
+
