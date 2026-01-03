@@ -1,4 +1,4 @@
-name: Projects Auto Update & Progress Monitor
+name: Projects v2 Auto Update & Progress Monitor
 
 on:
   schedule:
@@ -8,72 +8,129 @@ on:
 permissions:
   issues: write
   contents: read
-  repository-projects: write
-  discussions: read
 
 jobs:
   update-projects:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Auto-update projects
+      - name: Auto-update Projects v2
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const now = new Date();
             const oneWeek = 7 * 24 * 60 * 60 * 1000;
             const oneMonth = 30 * 24 * 60 * 60 * 1000;
 
+            const projectNumber = 5;
+
+            const projectData = await github.graphql(`
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  projectV2(number: $number) {
+                    id
+                    fields(first: 20) {
+                      nodes {
+                        ... on ProjectV2Field {
+                          id
+                          name
+                        }
+                      }
+                    }
+                    items(first: 100) {
+                      nodes {
+                        id
+                        content {
+                          ... on Issue {
+                            number
+                            updatedAt
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              number: projectNumber
+            });
+
+            const projectId = projectData.repository.projectV2.id;
+            const items = projectData.repository.projectV2.items.nodes;
+
+            // Open issues
             const issues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open'
             });
 
-            const projectNumber = 5;
-            const columns = await github.rest.projects.listColumns({
-              project_id: projectNumber
-            });
-
-            const columnMap = {};
-            for (const col of columns.data) {
-              columnMap[col.name] = col.id;
+            // Helper: issue → item mapping
+            const itemMap = {};
+            for (const item of items) {
+              if (item.content) itemMap[item.content.number] = item.id;
             }
 
             for (const issue of issues.data) {
-              const labels = issue.labels.map(l => typeof l === 'string' ? l : l.name);
               const updated = new Date(issue.updated_at);
               const diff = now - updated;
 
-              const projectItems = await github.rest.projects.listProjectItems({
-                project_id: projectNumber
-              });
-              const item = projectItems.data.find(i => i.content_url && i.content_url.endsWith(`/issues/${issue.number}`));
-
-              if (!item) {
-                await github.rest.projects.createProjectCard({
-                  column_id: columnMap['Approved'],
-                  content_id: issue.node_id,
-                  content_type: 'Issue'
+              let itemId = itemMap[issue.number];
+              if (!itemId) {
+                const addResp = await github.graphql(`
+                  mutation($projectId: ID!, $contentId: ID!) {
+                    addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) {
+                      item {
+                        id
+                      }
+                    }
+                  }
+                `, {
+                  projectId: projectId,
+                  contentId: issue.node_id
                 });
-                console.log(`Issue #${issue.number} added to Approved`);
-                continue;
+                console.log(`Issue #${issue.number} added to Project v2`);
+                itemId = addResp.addProjectV2ItemById.item.id;
               }
 
-              if (labels.includes('in-progress') && item.column_id !== columnMap['In Progress']) {
-                await github.rest.projects.moveProjectCard({
-                  card_id: item.id,
-                  position: 'top',
-                  column_id: columnMap['In Progress']
+              const labels = issue.labels.map(l => typeof l === 'string' ? l : l.name);
+              const field = projectData.repository.projectV2.fields.nodes.find(f => f.name === 'Status');
+              if (field) {
+                let statusValue;
+                if (labels.includes('in-progress')) statusValue = 'In Progress';
+                else if (labels.includes('done')) statusValue = 'Done';
+                else statusValue = 'Approved';
+
+                await github.graphql(`
+                  mutation($itemId: ID!, $fieldId: ID!, $value: String!) {
+                    updateProjectV2ItemFieldValue(input: {
+                      itemId: $itemId,
+                      fieldId: $fieldId,
+                      value: { singleSelectOptionId: $value }
+                    }) {
+                      projectV2Item {
+                        id
+                      }
+                    }
+                  }
+                `, {
+                  itemId: itemId,
+                  fieldId: field.id,
+                  value: statusValue
                 });
-                console.log(`Issue #${issue.number} moved to In Progress`);
-              } else if (labels.includes('done') && item.column_id !== columnMap['Done']) {
-                await github.rest.projects.moveProjectCard({
-                  card_id: item.id,
-                  position: 'top',
-                  column_id: columnMap['Done']
+                console.log(`Issue #${issue.number} set Status -> ${statusValue}`);
+              }
+
+              if (diff >= oneWeek && diff < oneMonth) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: '⚠️ This issue has not been updated for more than 1 week. Please check progress.'
                 });
-                console.log(`Issue #${issue.number} moved to Done`);
+                console.log(`Alerted issue #${issue.number} due to 1 week inactivity`);
               }
 
               if (diff >= oneMonth) {
@@ -84,13 +141,5 @@ jobs:
                   state: 'closed'
                 });
                 console.log(`Closed issue #${issue.number} due to 1 month inactivity`);
-              } else if (diff >= oneWeek) {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  body: '⚠️ This issue has not been updated for more than 1 week. Please check progress.'
-                });
-                console.log(`Alerted issue #${issue.number} due to 1 week inactivity`);
               }
             }
