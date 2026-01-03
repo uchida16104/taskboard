@@ -1,2 +1,2 @@
 # TaskList
-思いつきをタスクとして可視化。
+Visualize ideas as tasks.
