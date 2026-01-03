@@ -4,6 +4,10 @@ on:
   discussion:
     types: [labeled]
 
+permissions:
+  discussions: write
+  contents: read
+
 jobs:
   create-issue:
     if: github.event.label.name == 'approved'
