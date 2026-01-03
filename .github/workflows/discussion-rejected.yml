@@ -4,6 +4,10 @@ on:
   discussion:
     types: [labeled]
 
+permissions:
+  discussions: write
+  contents: read
+
 jobs:
   close-discussion:
     if: github.event.label.name == 'rejected'
