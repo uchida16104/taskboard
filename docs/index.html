@@ -1,69 +1,161 @@
-<!doctype html>
-<html lang="ja">
+<!DOCTYPE html>
+<html lang="en" class="h-full scroll-smooth">
 <head>
-<meta charset="utf-8" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TaskBoard Calendar</title>
 
-<!-- Tailwind -->
+<!-- TailwindCSS CDN -->
 <script src="https://cdn.tailwindcss.com"></script>
 
-<!-- Alpine -->
-<script defer src="https://unpkg.com/alpinejs@latest/dist/cdn.min.js"></script>
+<!-- Alpine.js -->
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.17.1/dist/cdn.min.js" defer></script>
+
+<!-- HTMX -->
+<script src="https://unpkg.com/htmx.org@1.9.3"></script>
+
+<!-- hyperscript -->
+<script src="https://unpkg.com/hyperscript.org@0.9.9"></script>
 
 <!-- AOS -->
-<link href="https://unpkg.com/aos@latest/dist/aos.css" rel="stylesheet">
-<script src="https://unpkg.com/aos@latest/dist/aos.js"></script>
+<link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+<script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
 
+<!-- Swiper -->
+<link rel="stylesheet" href="https://unpkg.com/swiper@9/swiper-bundle.min.css" />
+<script src="https://unpkg.com/swiper@9/swiper-bundle.min.js"></script>
+
+<!-- Mermaid -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+<!-- Lottie -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.11.2/lottie.min.js"></script>
+
+<!-- Shoelace -->
+<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.6.0/dist/shoelace.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.6.0/dist/themes/light.css">
+
+<!-- Iconify -->
+<script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+
+<!-- MotionOne -->
+<script src="https://cdn.jsdelivr.net/npm/@motionone/dom@5.9.1/dist/motion.min.js"></script>
+
+<style>
+  body { font-family: sans-serif; background: #f5f5f5; }
+  .calendar-day { min-height: 6rem; border: 1px solid #ddd; padding: 0.5rem; }
+  .issue-open { background: #d1fae5; }
+  .issue-closed { background: #fee2e2; }
+  .progress-bar { height: 0.5rem; background: #4ade80; }
+</style>
 </head>
-<body class="bg-gray-100 p-6" x-data="taskBoard()" x-init="init()">
+<body x-data="taskboard()" x-init="init()">
 
-<h1 class="text-3xl font-bold mb-4">TaskBoard Progress</h1>
+<div class="container mx-auto p-4">
 
-<!-- Progress -->
-<div class="mb-6">
-  <div class="text-sm mb-1">Progress: <span x-text="progress"></span>%</div>
-  <div class="w-full bg-gray-300 rounded h-4">
-    <div class="bg-green-500 h-4 rounded" :style="`width:${progress}%`"></div>
-  </div>
-</div>
+  <!-- Header -->
+  <h1 class="text-3xl font-bold mb-4">TaskBoard Calendar</h1>
 
-<!-- Tasks -->
-<div class="grid md:grid-cols-3 gap-4">
-  <template x-for="task in tasks">
-    <div class="bg-white p-4 rounded shadow" data-aos="fade-up">
-      <h2 class="font-bold" x-text="task.title"></h2>
-      <p class="text-sm text-gray-500" x-text="task.status"></p>
-      <a class="text-blue-600 text-sm" :href="task.url" target="_blank">GitHub</a>
+  <!-- Progress summary -->
+  <div class="mb-4">
+    <span class="font-semibold">Progress:</span>
+    <div class="w-full bg-gray-300 rounded h-2 relative mt-1">
+      <div class="progress-bar rounded" :style="`width: ${progressPercent}%`"></div>
     </div>
-  </template>
+    <span x-text="progressPercent + '%'"></span>
+  </div>
+
+  <!-- Calendar grid -->
+  <div class="grid grid-cols-7 gap-2 mb-8">
+    <template x-for="day in calendarDays" :key="day.date">
+      <div class="calendar-day rounded shadow-sm p-2"
+           :class="day.issues.some(i => i.state=='OPEN') ? 'issue-open' : ''"
+           x-tooltip="day.date">
+        <div class="font-bold text-sm mb-1" x-text="day.date"></div>
+        <ul class="text-xs list-disc pl-4">
+          <template x-for="issue in day.issues" :key="issue.url">
+            <li>
+              <a :href="issue.url" target="_blank" class="underline text-blue-600"
+                 x-text="issue.title"></a>
+            </li>
+          </template>
+        </ul>
+      </div>
+    </template>
+  </div>
+
+  <!-- Mermaid dependency chart -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-2">Project Dependencies</h2>
+    <div class="mermaid" x-html="mermaidCode"></div>
+  </div>
+
+  <!-- Lottie animation example -->
+  <div id="lottie-container" class="w-32 h-32 mx-auto"></div>
+
 </div>
 
 <script>
-function taskBoard() {
+function taskboard() {
   return {
-    tasks: [],
-    progress: 0,
-
-    async init() {
+    projects: [],
+    calendarDays: [],
+    progressPercent: 0,
+    mermaidCode: 'graph TD\nA[Start] --> B[Task1]\nB --> C[Task2]',
+    init() {
       AOS.init();
-      const res = await fetch('./data/projects.json');
-      const json = await res.json();
+      this.loadData();
+      this.initLottie();
+      mermaid.initialize({ startOnLoad: true });
+    },
+    async loadData() {
+      try {
+        const res = await fetch('https://raw.githubusercontent.com/Uchida16104/TaskBoard/refs/heads/main/docs/data/projects.json');
+        const data = await res.json();
 
-      const items = json.data.user.projectV2.items.nodes;
-      let done = 0;
+        const items = data.data.user.projectV2.items.nodes;
+        this.projects = items.map(node => {
+          return {
+            title: node.content ? node.content.title : 'No Title',
+            state: node.content ? node.content.state : 'OPEN',
+            url: node.content ? node.content.url : '#',
+            date: this.getFieldDate(node.fieldValues.nodes)
+          }
+        });
 
-      this.tasks = items.map(i => {
-        const statusField = i.fieldValues.nodes.find(f => f.field?.name === "Status");
-        if (statusField?.name === "Done") done++;
+        // Build calendar days (simple month)
+        this.buildCalendar();
 
-        return {
-          title: i.content?.title ?? "No title",
-          status: statusField?.name ?? "Unknown",
-          url: i.content?.url ?? "#"
-        };
+        // Calculate progress
+        const total = this.projects.length;
+        const done = this.projects.filter(p => p.state==='CLOSED').length;
+        this.progressPercent = Math.round(done/total*100);
+
+      } catch(e) {
+        console.error(e);
+      }
+    },
+    getFieldDate(fields) {
+      const dateField = fields.find(f => f.__typename==='ProjectV2ItemFieldDateValue');
+      return dateField ? dateField.date : '';
+    },
+    buildCalendar() {
+      const daysMap = {};
+      this.projects.forEach(p => {
+        const date = p.date || 'No Date';
+        if(!daysMap[date]) daysMap[date] = [];
+        daysMap[date].push(p);
       });
-
-      this.progress = Math.round((done / this.tasks.length) * 100);
+      this.calendarDays = Object.entries(daysMap).map(([date, issues])=>({date, issues}));
+    },
+    initLottie() {
+      lottie.loadAnimation({
+        container: document.getElementById('lottie-container'),
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: 'https://assets3.lottiefiles.com/packages/lf20_jcikwtux.json'
+      });
     }
   }
 }
