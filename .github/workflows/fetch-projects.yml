@@ -27,7 +27,7 @@ jobs:
         run: |
           mkdir -p docs/data
 
-          read -r -d '' QUERY << 'EOF'
+          QUERY=$(cat <<'EOF'
           query {
             user(login: "Uchida16104") {
               projectV2(number: 5) {
@@ -59,12 +59,14 @@ jobs:
             }
           }
           EOF
+          )
 
           curl -s -X POST https://api.github.com/graphql \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Content-Type: application/json" \
             -d "{\"query\": \"$QUERY\"}" \
             > docs/data/projects.json
+
 
 
       - name: Commit JSON
