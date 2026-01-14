@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TaskBoard Calendar</title>
 
-<!-- TailwindCSS CDN -->
+<!-- TailwindCSS -->
 <script src="https://cdn.tailwindcss.com"></script>
 
 <!-- Alpine.js -->
@@ -26,12 +26,13 @@
 <script src="https://unpkg.com/swiper@9/swiper-bundle.min.js"></script>
 
 <!-- Mermaid -->
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.min.js"></script>
 
 <!-- Lottie -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.11.2/lottie.min.js"></script>
 
-<!-- Shoelace -->
+<!-- Shoelace + Lit -->
+<script type="module" src="https://cdn.jsdelivr.net/npm/lit@2.7.5/index.js"></script>
 <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.6.0/dist/shoelace.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.6.0/dist/themes/light.css">
 
@@ -42,35 +43,33 @@
 <script src="https://cdn.jsdelivr.net/npm/@motionone/dom@5.9.1/dist/motion.min.js"></script>
 
 <style>
-  body { font-family: sans-serif; background: #f5f5f5; }
-  .calendar-day { min-height: 6rem; border: 1px solid #ddd; padding: 0.5rem; }
-  .issue-open { background: #d1fae5; }
-  .issue-closed { background: #fee2e2; }
-  .progress-bar { height: 0.5rem; background: #4ade80; }
+body { font-family: sans-serif; background: #f5f5f5; }
+.calendar-day { min-height: 6rem; border: 1px solid #ddd; padding: 0.5rem; }
+.issue-open { background: #d1fae5; }
+.issue-closed { background: #fee2e2; }
+.progress-bar { height: 0.5rem; background: #4ade80; }
 </style>
 </head>
 <body x-data="taskboard()" x-init="init()">
 
 <div class="container mx-auto p-4">
 
-  <!-- Header -->
   <h1 class="text-3xl font-bold mb-4">TaskBoard Calendar</h1>
 
-  <!-- Progress summary -->
+  <!-- Progress -->
   <div class="mb-4">
     <span class="font-semibold">Progress:</span>
-    <div class="w-full bg-gray-300 rounded h-2 relative mt-1">
+    <div class="w-full bg-gray-300 rounded h-2 mt-1 relative">
       <div class="progress-bar rounded" :style="`width: ${progressPercent}%`"></div>
     </div>
     <span x-text="progressPercent + '%'"></span>
   </div>
 
-  <!-- Calendar grid -->
+  <!-- Calendar -->
   <div class="grid grid-cols-7 gap-2 mb-8">
     <template x-for="day in calendarDays" :key="day.date">
       <div class="calendar-day rounded shadow-sm p-2"
-           :class="day.issues.some(i => i.state=='OPEN') ? 'issue-open' : ''"
-           x-tooltip="day.date">
+           :class="day.issues.some(i => i.state=='OPEN') ? 'issue-open' : 'issue-closed'">
         <div class="font-bold text-sm mb-1" x-text="day.date"></div>
         <ul class="text-xs list-disc pl-4">
           <template x-for="issue in day.issues" :key="issue.url">
@@ -84,13 +83,17 @@
     </template>
   </div>
 
-  <!-- Mermaid dependency chart -->
+  <!-- Mermaid -->
   <div class="mb-8">
     <h2 class="text-xl font-semibold mb-2">Project Dependencies</h2>
-    <div class="mermaid" x-html="mermaidCode"></div>
+    <div class="mermaid" x-ref="mermaidDiv">
+      graph TD
+      A[Start] --> B[Task1]
+      B --> C[Task2]
+    </div>
   </div>
 
-  <!-- Lottie animation example -->
+  <!-- Lottie -->
   <div id="lottie-container" class="w-32 h-32 mx-auto"></div>
 
 </div>
@@ -101,38 +104,39 @@ function taskboard() {
     projects: [],
     calendarDays: [],
     progressPercent: 0,
-    mermaidCode: 'graph TD\nA[Start] --> B[Task1]\nB --> C[Task2]',
     init() {
       AOS.init();
       this.loadData();
       this.initLottie();
-      mermaid.initialize({ startOnLoad: true });
     },
     async loadData() {
       try {
         const res = await fetch('https://raw.githubusercontent.com/Uchida16104/TaskBoard/refs/heads/main/docs/data/projects.json');
         const data = await res.json();
-
         const items = data.data.user.projectV2.items.nodes;
-        this.projects = items.map(node => {
-          return {
-            title: node.content ? node.content.title : 'No Title',
-            state: node.content ? node.content.state : 'OPEN',
-            url: node.content ? node.content.url : '#',
-            date: this.getFieldDate(node.fieldValues.nodes)
-          }
-        });
 
-        // Build calendar days (simple month)
+        this.projects = items.map(node => ({
+          title: node.content ? node.content.title : 'No Title',
+          state: node.content ? node.content.state : 'OPEN',
+          url: node.content ? node.content.url : '#',
+          date: this.getFieldDate(node.fieldValues.nodes)
+        }));
+
+        // Calendar
         this.buildCalendar();
 
-        // Calculate progress
+        // Progress
         const total = this.projects.length;
         const done = this.projects.filter(p => p.state==='CLOSED').length;
-        this.progressPercent = Math.round(done/total*100);
+        this.progressPercent = total ? Math.round(done/total*100) : 0;
+
+        // Initialize Mermaid after DOM
+        this.$nextTick(() => {
+          mermaid.init(undefined, this.$refs.mermaidDiv);
+        });
 
       } catch(e) {
-        console.error(e);
+        console.error('Error loading projects.json:', e);
       }
     },
     getFieldDate(fields) {
@@ -146,7 +150,7 @@ function taskboard() {
         if(!daysMap[date]) daysMap[date] = [];
         daysMap[date].push(p);
       });
-      this.calendarDays = Object.entries(daysMap).map(([date, issues])=>({date, issues}));
+      this.calendarDays = Object.entries(daysMap).map(([date, issues]) => ({ date, issues }));
     },
     initLottie() {
       lottie.loadAnimation({
