@@ -12,6 +12,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync with remote
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git pull --rebase origin main
 
       - name: Fetch Projects v2
         env:
@@ -24,13 +32,8 @@ jobs:
             -d '{"query":"query { user(login: \"Uchida16104\") { projectV2(number: 5) { title items(first: 100) { nodes { content { ... on Issue { title state url } } fieldValues(first: 20) { nodes { ... on ProjectV2ItemFieldSingleSelectValue { name field { name } } ... on ProjectV2ItemFieldDateValue { date field { name } } } } } } } }"}' \
             > docs/data/projects.json
 
-
       - name: Commit JSON
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git fetch origin
-          git pull --rebase origin main
           git add docs/data/projects.json
           git commit -m "Update projects data" || echo "No changes"
           git push origin main
