@@ -1,5 +1,1 @@
-{
-  "message": "Bad credentials",
-  "documentation_url": "https://docs.github.com/rest",
-  "status": "401"
-}
+{"errors":[{"message":"Expected NAME, actual: (none) (\"\") at [1, 309]","locations":[{"line":1,"column":309}]}]}
