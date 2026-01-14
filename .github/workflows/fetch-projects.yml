@@ -10,66 +10,47 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      # ----------------------------------------
+      # Checkout
+      # ----------------------------------------
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # ----------------------------------------
+      # Sync with remote (safe rebase)
+      # ----------------------------------------
       - name: Sync with remote
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git pull --rebase origin main
 
+      # ----------------------------------------
+      # Fetch GitHub Projects v2 (GraphQL)
+      # ----------------------------------------
       - name: Fetch Projects v2
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          set -e
-
           mkdir -p docs/data
 
-          QUERY=$(cat <<'EOF'
-query {
-  user(login: "Uchida16104") {
-    projectV2(number: 5) {
-      title
-      items(first: 100) {
-        nodes {
-          content {
-            ... on Issue {
-              title
-              state
-              url
-            }
+          cat <<'EOF' > payload.json
+          {
+            "query": "query { user(login: \"Uchida16104\") { projectV2(number: 5) { title items(first: 100) { nodes { content { ... on Issue { title state url } } fieldValues(first: 20) { nodes { ... on ProjectV2ItemFieldSingleSelectValue { name field { name } } ... on ProjectV2ItemFieldDateValue { date field { name } } } } } } } }"
           }
-          fieldValues(first: 20) {
-            nodes {
-              ... on ProjectV2ItemFieldSingleSelectValue {
-                name
-                field { name }
-              }
-              ... on ProjectV2ItemFieldDateValue {
-                date
-                field { name }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-EOF
-)
+          EOF
 
-          jq -n --arg query "$QUERY" '{query: $query}' \
-          | curl -s -X POST https://api.github.com/graphql \
-              -H "Authorization: Bearer '"$GH_TOKEN"'" \
-              -H "Content-Type: application/json" \
-              --data-binary @- \
-          > docs/data/projects.json
+          curl -s -X POST https://api.github.com/graphql \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-binary @payload.json \
+            > docs/data/projects.json
 
+      # ----------------------------------------
+      # Commit & Push
+      # ----------------------------------------
       - name: Commit JSON
         run: |
           git add docs/data/projects.json
