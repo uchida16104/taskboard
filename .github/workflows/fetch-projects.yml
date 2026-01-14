@@ -26,11 +26,46 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           mkdir -p docs/data
+
+          read -r -d '' QUERY << 'EOF'
+          query {
+            user(login: "Uchida16104") {
+              projectV2(number: 5) {
+                title
+                items(first: 100) {
+                  nodes {
+                    content {
+                      ... on Issue {
+                        title
+                        state
+                        url
+                      }
+                    }
+                    fieldValues(first: 20) {
+                      nodes {
+                        ... on ProjectV2ItemFieldSingleSelectValue {
+                          name
+                          field { name }
+                        }
+                        ... on ProjectV2ItemFieldDateValue {
+                          date
+                          field { name }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          EOF
+
           curl -s -X POST https://api.github.com/graphql \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Content-Type: application/json" \
-            -d '{"query":"query { user(login: \"Uchida16104\") { projectV2(number: 5) { title items(first: 100) { nodes { content { ... on Issue { title state url } } fieldValues(first: 20) { nodes { ... on ProjectV2ItemFieldSingleSelectValue { name field { name } } ... on ProjectV2ItemFieldDateValue { date field { name } } } } } } } }"}' \
+            -d "{\"query\": \"$QUERY\"}" \
             > docs/data/projects.json
+
 
       - name: Commit JSON
         run: |
