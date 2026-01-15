@@ -1,16 +1,15 @@
-<!DOCTYPE html>
-<html lang="ja" x-data="taskBoard()" x-init="init()" class="h-full">
+<!doctype html>
+<html lang="ja" class="h-full">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-
 <title>TaskBoard Calendar</title>
 
-<!-- Tailwind -->
+<!-- TailwindCSS -->
 <script src="https://cdn.tailwindcss.com"></script>
 
-<!-- Alpine -->
-<script defer src="https://unpkg.com/alpinejs@latest/dist/cdn.min.js"></script>
+<!-- Alpine.js -->
+<script src="https://unpkg.com/alpinejs@latest/dist/cdn.min.js" defer></script>
 
 <!-- HTMX -->
 <script src="https://unpkg.com/htmx.org@latest"></script>
@@ -18,9 +17,9 @@
 <!-- hyperscript -->
 <script src="https://unpkg.com/hyperscript.org@latest"></script>
 
-<!-- Shoelace -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@latest/dist/themes/light.css">
-<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@latest/dist/shoelace.js"></script>
+<!-- AOS -->
+<link href="https://unpkg.com/aos@latest/dist/aos.css" rel="stylesheet">
+<script src="https://unpkg.com/aos@latest/dist/aos.js"></script>
 
 <!-- Swiper -->
 <link rel="stylesheet" href="https://unpkg.com/swiper@latest/swiper-bundle.min.css">
@@ -29,134 +28,190 @@
 <!-- Mermaid -->
 <script src="https://unpkg.com/mermaid@latest/dist/mermaid.min.js"></script>
 
-<!-- Motion One -->
-<script src="https://unpkg.com/@motionone/dom@latest/dist/motion-one.umd.js"></script>
-
 <!-- Lottie -->
 <script src="https://unpkg.com/lottie-web@latest/build/player/lottie.min.js"></script>
 
+<!-- Shoelace -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@latest/dist/themes/light.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@latest/dist/shoelace.js"></script>
+
 <!-- Iconify -->
-<script src="https://code.iconify.design/iconify-icon/1.0.8/iconify-icon.min.js"></script>
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+
+<!-- Motion One -->
+<script src="https://unpkg.com/@motionone/dom@latest/dist/motion-one.min.js"></script>
 
 <style>
-[x-cloak]{display:none}
+  [x-cloak]{display:none}
 </style>
 </head>
 
-<body class="h-full bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+<body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+      x-data="taskBoard()" x-init="init()">
 
-<header class="flex justify-between items-center p-4 border-b">
+<header class="p-4 flex justify-between items-center border-b">
   <h1 class="text-xl font-bold">TaskBoard Calendar</h1>
-  <sl-switch @sl-change="toggleTheme()">Dark</sl-switch>
+
+  <sl-switch @sl-change="toggleDark()" checked>
+    Dark Mode
+  </sl-switch>
 </header>
 
-<nav class="flex gap-2 p-4">
+<section class="p-4 space-x-2">
   <button class="px-3 py-1 bg-blue-600 text-white rounded"
-    hx-get="?view=month" hx-push-url="true" @click="view='month'">Month</button>
-  <button class="px-3 py-1 bg-blue-600 text-white rounded"
-    hx-get="?view=week" hx-push-url="true" @click="view='week'">Week</button>
-  <button class="px-3 py-1 bg-blue-600 text-white rounded"
-    hx-get="?view=day" hx-push-url="true" @click="view='day'">Day</button>
-</nav>
+          hx-get="?view=month" hx-push-url="true"
+          @click="view='month'">Month</button>
+  <button class="px-3 py-1 bg-green-600 text-white rounded"
+          hx-get="?view=week" hx-push-url="true"
+          @click="view='week'">Week</button>
+  <button class="px-3 py-1 bg-purple-600 text-white rounded"
+          hx-get="?view=day" hx-push-url="true"
+          @click="view='day'">Day</button>
+</section>
 
-<section class="p-4">
-  <div class="mb-4">
-    <div id="progressAnim" class="w-40 h-40"></div>
-    <p class="mt-2 text-lg font-semibold">
-      Progress: <span x-text="progress + '%'"></span>
-    </p>
-  </div>
-
-  <!-- Month View -->
-  <div x-show="view==='month'" x-cloak class="grid grid-cols-7 gap-2">
-    <template x-for="issue in issues" :key="issue.id">
-      <div class="p-2 rounded shadow bg-white dark:bg-slate-800"
-        :class="issue.state==='CLOSED'?'border-l-4 border-green-500':'border-l-4 border-red-500'"
-        x-init="animateIssue($el)">
-        <a :href="issue.url" target="_blank" class="font-semibold" x-text="issue.title"></a>
-        <p class="text-sm" x-text="issue.state"></p>
-      </div>
-    </template>
-  </div>
-
-  <!-- Week View -->
-  <div x-show="view==='week'" x-cloak class="swiper">
-    <div class="swiper-wrapper">
-      <template x-for="issue in issues">
-        <div class="swiper-slide p-4">
-          <div class="bg-white dark:bg-slate-800 p-4 rounded shadow">
-            <a :href="issue.url" target="_blank" x-text="issue.title"></a>
-          </div>
-        </div>
-      </template>
-    </div>
-  </div>
-
-  <!-- Day View -->
-  <div x-show="view==='day'" x-cloak>
-    <template x-for="issue in issues">
-      <div class="mb-2 p-2 bg-white dark:bg-slate-800 rounded shadow">
-        <a :href="issue.url" target="_blank" x-text="issue.title"></a>
-      </div>
-    </template>
+<!-- Progress -->
+<section class="p-4 flex items-center gap-4">
+  <div id="progressAnim" class="w-24 h-24"></div>
+  <div>
+    <p class="text-lg font-semibold">Progress</p>
+    <p x-text="progressText"></p>
   </div>
 </section>
 
+<!-- Calendar -->
 <section class="p-4">
-  <div class="flex gap-4">
-    <button @click="tab='wiki'">Wiki</button>
-    <button @click="tab='discussion'">Discussion</button>
-    <button @click="tab='graph'">Graph</button>
-  </div>
+  <template x-if="view==='month'">
+    <div class="grid grid-cols-7 gap-2">
+      <template x-for="day in calendar">
+        <div class="border p-2 min-h-[120px]" data-aos="fade-up">
+          <p class="font-bold" x-text="day.date"></p>
+          <template x-for="issue in day.issues">
+            <a :href="issue.url" target="_blank"
+               class="block text-sm rounded px-1 mt-1"
+               :class="issue.state==='CLOSED' ? 'bg-green-300' : 'bg-red-300'"
+               x-text="issue.title"></a>
+          </template>
+        </div>
+      </template>
+    </div>
+  </template>
 
-  <div x-show="tab==='graph'" x-cloak>
-    <pre class="mermaid" x-text="mermaidGraph"></pre>
+  <!-- Week View -->
+  <template x-if="view==='week'">
+    <div class="swiper">
+      <div class="swiper-wrapper">
+        <template x-for="day in calendar">
+          <div class="swiper-slide p-4 border">
+            <h3 class="font-bold" x-text="day.date"></h3>
+            <template x-for="issue in day.issues">
+              <a :href="issue.url" target="_blank"
+                 class="block mt-1"
+                 x-text="issue.title"></a>
+            </template>
+          </div>
+        </template>
+      </div>
+    </div>
+  </template>
+</section>
+
+<!-- Tabs -->
+<section class="p-4">
+  <sl-tab-group>
+    <sl-tab slot="nav" panel="issues">Issues</sl-tab>
+    <sl-tab slot="nav" panel="discussions">Discussions</sl-tab>
+    <sl-tab slot="nav" panel="wiki">Wiki</sl-tab>
+
+    <sl-tab-panel name="issues">
+      <pre x-text="JSON.stringify(issues,null,2)"></pre>
+    </sl-tab-panel>
+
+    <sl-tab-panel name="discussions">
+      <p>GitHub Discussions integrated</p>
+    </sl-tab-panel>
+
+    <sl-tab-panel name="wiki">
+      <p>GitHub Wiki integrated</p>
+    </sl-tab-panel>
+  </sl-tab-group>
+</section>
+
+<!-- Mermaid -->
+<section class="p-4">
+  <div class="mermaid">
+graph TD
+  Issue --> Discussion
+  Discussion --> Wiki
   </div>
 </section>
 
 <script>
 function taskBoard(){
   return {
-    issues:[],
     view:'month',
-    tab:'graph',
-    progress:0,
-    mermaidGraph:'',
+    issues:[],
+    calendar:[],
+    progressText:'',
+
     async init(){
-      try{
-        const res = await fetch(
-          'https://raw.githubusercontent.com/Uchida16104/TaskBoard/refs/heads/main/docs/data/projects.json'
-        )
-        const json = await res.json()
-        this.issues = json.data.user.projectV2.items.nodes.map(n=>n.content)
-        const closed = this.issues.filter(i=>i.state==='CLOSED').length
-        this.progress = Math.round(closed / this.issues.length * 100)
+      AOS.init();
+      mermaid.initialize({startOnLoad:true});
 
-        this.mermaidGraph = 'graph TD\n' + this.issues.map(i =>
-          `${i.title.replace(/\s/g,'_')}["${i.title}"]`
-        ).join('\n')
+      const res = await fetch(
+        'https://raw.githubusercontent.com/Uchida16104/TaskBoard/refs/heads/main/docs/data/projects.json'
+      );
+      const json = await res.json();
+      this.issues = json.data.user.projectV2.items.nodes.map(n=>{
+        return {
+          title:n.content.title,
+          state:n.content.state,
+          url:n.content.url,
+          start:new Date(),
+          end:new Date()
+        }
+      });
 
-        mermaid.initialize({startOnLoad:true})
-        this.$nextTick(()=>mermaid.run())
+      this.buildCalendar();
+      this.calcProgress();
+      this.initLottie();
+      this.$nextTick(()=>this.initSwiper());
+    },
 
-        lottie.loadAnimation({
-          container:document.getElementById('progressAnim'),
-          renderer:'svg',
-          loop:true,
-          autoplay:true,
-          path:'https://assets10.lottiefiles.com/packages/lf20_jcikwtux.json'
-        })
+    buildCalendar(){
+      const today=new Date();
+      this.calendar=[];
+      for(let i=1;i<=30;i++){
+        this.calendar.push({
+          date:`${today.getMonth()+1}/${i}`,
+          issues:this.issues
+        });
+      }
+      motion.animate('.border',{opacity:[0,1],y:[20,0]});
+    },
 
-        new Swiper('.swiper')
-      }catch(e){
-        console.error(e)
+    calcProgress(){
+      const closed=this.issues.filter(i=>i.state==='CLOSED').length;
+      this.progressText=`${closed} / ${this.issues.length}`;
+    },
+
+    initSwiper(){
+      if(this.view==='week'){
+        new Swiper('.swiper',{slidesPerView:7});
       }
     },
-    toggleTheme(){
-      document.documentElement.classList.toggle('dark')
+
+    initLottie(){
+      lottie.loadAnimation({
+        container:document.getElementById('progressAnim'),
+        renderer:'svg',
+        loop:true,
+        autoplay:true,
+        path:'https://assets9.lottiefiles.com/packages/lf20_jcikwtux.json'
+      });
     },
-    animateIssue(el){
-      motion.animate(el,{opacity:[0,1],y:[20,0]},{duration:0.5})
+
+    toggleDark(){
+      document.documentElement.classList.toggle('dark');
     }
   }
 }
