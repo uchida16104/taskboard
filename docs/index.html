@@ -1,175 +1,134 @@
-<!doctype html>
-<html lang="ja" class="h-full" x-data="app()" x-init="init()">
+<!DOCTYPE html>
+<html lang="ja">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8">
 <title>TaskBoard Calendar</title>
 
-<!-- Tailwind -->
+<!-- TailwindCSS @latest -->
 <script src="https://cdn.tailwindcss.com"></script>
 
-<!-- Alpine -->
-<script src="https://unpkg.com/alpinejs@latest/dist/cdn.min.js" defer></script>
-
-<!-- HTMX -->
+<!-- HTMX @latest -->
 <script src="https://unpkg.com/htmx.org@latest"></script>
 
-<!-- hyperscript -->
+<!-- Alpine.js @latest -->
+<script src="https://unpkg.com/alpinejs@latest" defer></script>
+
+<!-- hyperscript @latest -->
 <script src="https://unpkg.com/hyperscript.org@latest"></script>
 
-<!-- Shoelace -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@latest/dist/themes/light.css">
-<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@latest/dist/shoelace.js"></script>
+<!-- AOS @latest -->
+<link href="https://unpkg.com/aos@latest/dist/aos.css" rel="stylesheet"/>
+<script src="https://unpkg.com/aos@latest/dist/aos.js"></script>
 
-<!-- Swiper -->
+<!-- Swiper @latest -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@latest/swiper-bundle.min.css">
 <script src="https://cdn.jsdelivr.net/npm/swiper@latest/swiper-bundle.min.js"></script>
 
-<!-- Mermaid -->
+<!-- mermaid @latest -->
 <script src="https://cdn.jsdelivr.net/npm/mermaid@latest/dist/mermaid.min.js"></script>
 
-<!-- Lottie -->
-<script src="https://unpkg.com/lottie-web@latest/build/player/lottie.min.js"></script>
+<!-- lottie-web @latest -->
+<script src="https://cdn.jsdelivr.net/npm/lottie-web@latest/build/player/lottie.min.js"></script>
 
-<!-- Motion One -->
-<script src="https://cdn.jsdelivr.net/npm/@motionone/dom@latest/dist/motion-one.umd.min.js"></script>
+<!-- shoelace @latest -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@latest/dist/themes/light.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@latest/dist/shoelace.esm.js"></script>
 
-<!-- Iconify -->
-<script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+<!-- iconify -->
+<script src="https://code.iconify.design/3/3.2.1/iconify.min.js"></script>
+
+<!-- Motion One @latest -->
+<script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.dev.js"></script>
 
 <style>
-.issue-open { background:#22c55e }
-.issue-closed { background:#64748b }
+  html { scroll-behavior: smooth; }
 </style>
 </head>
+<body class="bg-gray-100 text-gray-900">
 
-<body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+<div x-data="app()" x-init="init()" class="container mx-auto p-4">
 
-<header class="p-4 flex justify-between items-center border-b">
-  <h1 class="text-xl font-bold flex items-center gap-2">
-    <span class="iconify" data-icon="mdi:calendar-check"></span>
-    TaskBoard Calendar
-  </h1>
-  <sl-switch @sl-change="toggleDark()">Dark</sl-switch>
-</header>
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-4">
+    <h1 class="text-3xl font-bold">TaskBoard Calendar</h1>
 
-<main class="p-4 space-y-6">
-
-<!-- View Switch -->
-<div class="flex gap-2">
-  <button class="btn" @click="setView('month')" hx-push-url="true">Month</button>
-  <button class="btn" @click="setView('week')" hx-push-url="true">Week</button>
-  <button class="btn" @click="setView('day')" hx-push-url="true">Day</button>
-</div>
-
-<!-- Progress -->
-<div class="flex items-center gap-4">
-  <div id="lottie" class="w-24 h-24"></div>
-  <div>
-    <p class="text-lg font-semibold">Progress</p>
-    <p x-text="progress+'%'"></p>
-  </div>
-</div>
-
-<!-- Calendar -->
-<section x-show="view==='month'" class="grid grid-cols-7 gap-2">
-  <template x-for="day in monthDays">
-    <div class="border p-2 min-h-[120px]">
-      <div class="text-sm font-bold" x-text="day.date"></div>
-      <template x-for="i in day.items">
-        <a :href="i.url" target="_blank"
-           class="block text-xs mt-1 text-white px-1 rounded"
-           :class="i.state==='OPEN'?'issue-open':'issue-closed'">
-          <span x-text="i.title"></span>
-        </a>
-      </template>
+    <!-- View Switch -->
+    <div class="space-x-2">
+      <button @click="view='month'" class="btn">Month</button>
+      <button @click="view='week'" class="btn">Week</button>
+      <button @click="view='day'" class="btn">Day</button>
     </div>
-  </template>
-</section>
-
-<!-- Week -->
-<section x-show="view==='week'" class="swiper">
-  <div class="swiper-wrapper">
-    <template x-for="d in weekDays">
-      <div class="swiper-slide p-4 border">
-        <h3 x-text="d.date"></h3>
-        <template x-for="i in d.items">
-          <a :href="i.url" target="_blank" class="block text-sm underline">
-            <span x-text="i.title"></span>
-          </a>
-        </template>
-      </div>
-    </template>
   </div>
-</section>
 
-<!-- Mermaid -->
-<section>
-  <h2 class="font-bold mb-2">Relations</h2>
-  <div class="mermaid" x-text="mermaidText"></div>
-</section>
+  <!-- Mermaid Dependencies -->
+  <div id="dependencies" class="my-6"></div>
 
-</main>
+  <!-- Calendar -->
+  <div id="calendar"></div>
+
+  <!-- Progress -->
+  <div class="my-6 p-4 bg-white shadow rounded">
+    <h2 class="text-xl font-semibold">Progress Rates</h2>
+    <div id="progress"></div>
+  </div>
+</div>
 
 <script>
 function app(){
-return{
-  view:'month',
-  items:[],
-  monthDays:[],
-  weekDays:[],
-  progress:0,
-  mermaidText:'graph TD',
-  async init(){
-    mermaid.initialize({startOnLoad:true})
-    await this.load()
-    this.calc()
-    this.render()
-    lottie.loadAnimation({
-      container:document.getElementById('lottie'),
-      renderer:'svg',
-      loop:true,
-      autoplay:true,
-      path:'https://assets9.lottiefiles.com/packages/lf20_touohxv0.json'
-    })
-  },
-  async load(){
-    const res = await fetch('https://raw.githubusercontent.com/Uchida16104/TaskBoard/refs/heads/main/docs/data/projects.json')
-    const json = await res.json()
-    this.items = json.data.user.projectV2.items.nodes.map(n=>{
-      const b = n.content.body||''
-      const s = b.match(/start:\s*([0-9\/\-]+)/i)?.[1]
-      const e = b.match(/end:\s*([0-9\/\-]+)/i)?.[1]
-      return {...n.content,start:s,end:e}
-    })
-  },
-  calc(){
-    const closed=this.items.filter(i=>i.state==='CLOSED').length
-    this.progress=Math.round(closed/this.items.length*100)
-  },
-  render(){
-    const today=new Date()
-    this.monthDays=[...Array(31)].map((_,i)=>{
-      const d=new Date(today.getFullYear(),today.getMonth(),i+1)
-      return{
-        date:d.getDate(),
-        items:this.items.filter(it=>{
-          const s=new Date(it.start||d)
-          const e=new Date(it.end||d)
-          return d>=s && d<=e
-        })
-      }
-    })
-    this.mermaidText+='\\n'
-    this.items.forEach(i=>{
-      this.mermaidText+=`Issue_${i.title.replace(/\\W/g,'_')}-->Wiki\n`
-    })
-  },
-  setView(v){this.view=v},
-  toggleDark(){
-    document.documentElement.classList.toggle('dark')
+  return {
+
+    view: 'month', data: [], issues: [], wiki: [], discussions: [], dependencies: '',
+
+    init(){
+
+      AOS.init();
+
+      // 1) JSON Fetch
+      fetch("https://raw.githubusercontent.com/Uchida16104/TaskBoard/refs/heads/main/docs/data/projects.json")
+      .then(r => r.json())
+      .then(json => {
+        this.issues = json.data.user.projectV2.items.nodes.map(i=>{
+          return {
+            title: i.content.title,
+            state: i.content.state,
+            url: i.content.url
+          }
+        });
+      })
+      .then(_ => this.renderCalendar());
+
+      // 2) Discussions Fetch
+      fetch("https://api.github.com/repos/Uchida16104/TaskBoard/discussions")
+      .then(r=>r.json())
+      .then(d=>this.discussions=d);
+
+      // 3) Wiki Pages Fetch
+      fetch("https://api.github.com/repos/Uchida16104/TaskBoard/wiki/pages")
+      .then(r=>r.json())
+      .then(w=>this.wiki=w);
+
+    },
+
+    renderCalendar(){
+
+      // progress
+      let closed = this.issues.filter(i=>i.state==="CLOSED").length;
+      let total = this.issues.length;
+      document.querySelector("#progress").innerHTML =
+        `<div class="text-lg font-bold">${closed}/${total} closed (${Math.round(closed/total*100)}%)</div>`;
+
+      // Basic calendar HTML for month
+      document.querySelector("#calendar").innerHTML =
+        `<div class="grid grid-cols-7 gap-1">
+          ${this.issues.map(i =>
+            `<div class="p-2 bg-white rounded shadow" data-aos="fade-up">
+               <a href="${i.url}" class="font-semibold">${i.title}</a>
+               <div class="${i.state==='OPEN'?'text-red-600':'text-green-600'}">${i.state}</div>
+             </div>`).join("")}
+        </div>`;
+    }
   }
-}}
+}
 </script>
 
 </body>
