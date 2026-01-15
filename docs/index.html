@@ -1,9 +1,9 @@
-<!doctype html>
-<html lang="ja" x-data="taskBoard()" x-init="init()" :class="dark ? 'sl-theme-dark' : ''">
+<!DOCTYPE html>
+<html lang="ja" class="h-full" x-data="app()" x-init="init()">
 <head>
-<meta charset="utf-8">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>TaskBoard Calendar</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <!-- Tailwind -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -17,16 +17,13 @@
 <!-- hyperscript -->
 <script src="https://unpkg.com/hyperscript.org@latest"></script>
 
-<!-- Shoelace -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@latest/dist/themes/light.css">
-<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@latest/dist/shoelace.js"></script>
+<!-- AOS -->
+<link rel="stylesheet" href="https://unpkg.com/aos@latest/dist/aos.css">
+<script src="https://unpkg.com/aos@latest/dist/aos.js"></script>
 
 <!-- Swiper -->
 <link rel="stylesheet" href="https://unpkg.com/swiper@latest/swiper-bundle.min.css">
 <script src="https://unpkg.com/swiper@latest/swiper-bundle.min.js"></script>
-
-<!-- Motion One -->
-<script src="https://unpkg.com/motion@latest/dist/motion.min.js"></script>
 
 <!-- Mermaid -->
 <script src="https://unpkg.com/mermaid@latest/dist/mermaid.min.js"></script>
@@ -34,130 +31,175 @@
 <!-- Lottie -->
 <script src="https://unpkg.com/lottie-web@latest/build/player/lottie.min.js"></script>
 
+<!-- Shoelace -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@latest/dist/themes/light.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@latest/dist/shoelace.js"></script>
+
 <!-- Iconify -->
-<script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+
+<!-- Motion One -->
+<script src="https://unpkg.com/motion@latest/dist/motion.min.js"></script>
 
 <style>
-.issue-open { background:#2563eb }
-.issue-closed { background:#16a34a }
+  [x-cloak] { display:none }
 </style>
 </head>
 
-<body class="bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white">
+<body class="h-full bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100">
 
-<header class="flex justify-between p-4">
-<h1 class="text-xl font-bold">TaskBoard Calendar</h1>
-<sl-switch x-model="dark">Dark</sl-switch>
+<header class="p-4 flex justify-between items-center">
+  <h1 class="text-2xl font-bold">TaskBoard Calendar</h1>
+
+  <sl-switch @sl-change="toggleDark()">Dark</sl-switch>
 </header>
 
-<nav class="flex gap-2 p-2">
-<button @click="setView('month')" hx-push-url="true" hx-get="?view=month">Month</button>
-<button @click="setView('week')" hx-push-url="true" hx-get="?view=week">Week</button>
-<button @click="setView('day')" hx-push-url="true" hx-get="?view=day">Day</button>
+<!-- VIEW SWITCH -->
+<nav class="flex gap-2 p-4">
+  <button class="px-3 py-1 bg-blue-600 text-white rounded"
+    hx-get="?view=month" hx-push-url="true" @click="view='month'">Month</button>
+  <button class="px-3 py-1 bg-blue-600 text-white rounded"
+    hx-get="?view=week" hx-push-url="true" @click="view='week'">Week</button>
+  <button class="px-3 py-1 bg-blue-600 text-white rounded"
+    hx-get="?view=day" hx-push-url="true" @click="view='day'">Day</button>
 </nav>
 
+<!-- PROGRESS -->
 <section class="p-4">
-<div id="progress" class="w-full h-32"></div>
+  <div class="flex items-center gap-4">
+    <div id="progressAnim" class="w-24 h-24"></div>
+    <div>
+      <p class="text-lg font-semibold">Progress</p>
+      <p x-text="progressText"></p>
+    </div>
+  </div>
 </section>
 
-<section x-show="view==='week'" class="swiper">
-<div class="swiper-wrapper">
-<template x-for="d in weekDays">
-<div class="swiper-slide p-2">
-<h3 x-text="d"></h3>
-<div x-html="renderIssues(d)"></div>
-</div>
-</template>
-</div>
-</section>
-
+<!-- CALENDAR -->
 <section class="p-4">
-<svg id="calendar" width="100%" height="400"></svg>
+
+  <!-- MONTH -->
+  <template x-if="view==='month'">
+    <div class="grid grid-cols-7 gap-2">
+      <template x-for="issue in issues">
+        <div class="p-2 rounded border"
+          :class="issue.state==='CLOSED'?'bg-green-200':'bg-yellow-200'"
+          x-init="animate($el)">
+          <a :href="issue.url" target="_blank" class="font-semibold block"
+            x-text="issue.title"></a>
+          <small x-text="issue.start + ' → ' + issue.end"></small>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <!-- WEEK -->
+  <template x-if="view==='week'">
+    <div class="swiper">
+      <div class="swiper-wrapper">
+        <template x-for="issue in issues">
+          <div class="swiper-slide p-4 border rounded">
+            <a :href="issue.url" target="_blank" x-text="issue.title"></a>
+          </div>
+        </template>
+      </div>
+    </div>
+  </template>
+
+  <!-- DAY -->
+  <template x-if="view==='day'">
+    <ul>
+      <template x-for="issue in issues">
+        <li class="mb-2">
+          <a :href="issue.url" target="_blank" x-text="issue.title"></a>
+        </li>
+      </template>
+    </ul>
+  </template>
+
 </section>
 
+<!-- TABS -->
 <section class="p-4">
 <sl-tab-group>
-<sl-tab slot="nav" panel="wiki">Wiki</sl-tab>
-<sl-tab slot="nav" panel="discussion">Discussion</sl-tab>
+  <sl-tab slot="nav" panel="wiki">Wiki</sl-tab>
+  <sl-tab slot="nav" panel="discussion">Discussion</sl-tab>
 
-<sl-tab-panel name="wiki">
-<div class="mermaid" x-text="wikiGraph"></div>
-</sl-tab-panel>
+  <sl-tab-panel name="wiki">
+    <div id="wikiGraph" class="mermaid"></div>
+  </sl-tab-panel>
 
-<sl-tab-panel name="discussion">
-<div class="mermaid" x-text="discussionGraph"></div>
-</sl-tab-panel>
+  <sl-tab-panel name="discussion">
+    <div id="discussionGraph" class="mermaid"></div>
+  </sl-tab-panel>
 </sl-tab-group>
 </section>
 
 <script>
-function taskBoard(){
-return {
-dark:false,
-view:'month',
-items:[],
-weekDays:[],
-wikiGraph:'',
-discussionGraph:'',
-
-async init(){
-await this.load()
-this.calcProgress()
-this.renderCalendar()
-this.initLottie()
-mermaid.initialize({ startOnLoad:true })
-},
-
-async load(){
-try{
-const res = await fetch(
-'https://raw.githubusercontent.com/Uchida16104/TaskBoard/refs/heads/main/docs/data/projects.json'
-)
-const json = await res.json()
-this.items = json.data.user.projectV2.items.nodes.map(n=>{
-const body = n.content.body || ''
-const s = body.match(/start:\s*(\d{4}-\d{2}-\d{2})/)
-const e = body.match(/end:\s*(\d{4}-\d{2}-\d{2})/)
-return {
-...n.content,
-start: s ? s[1] : new Date().toISOString().slice(0,10),
-end:   e ? e[1] : new Date().toISOString().slice(0,10)
+function app(){
+  return {
+    issues: [],
+    view: new URLSearchParams(location.search).get('view') || 'month',
+    progressText: '',
+    async init(){
+      AOS.init();
+      await this.loadData();
+      this.initProgress();
+      this.initSwiper();
+      this.renderMermaid();
+    },
+    async loadData(){
+      const res = await fetch(
+        'https://raw.githubusercontent.com/Uchida16104/TaskBoard/refs/heads/main/docs/data/projects.json',
+        { cache:'no-store' }
+      );
+      const json = await res.json();
+      const nodes = json?.data?.user?.projectV2?.items?.nodes || [];
+      this.issues = nodes.map(n=>{
+        const body = n.content?.body || '';
+        const s = body.match(/start:\s*(\d{4}-\d{2}-\d{2})/);
+        const e = body.match(/end:\s*(\d{4}-\d{2}-\d{2})/);
+        return {
+          title: n.content.title,
+          state: n.content.state,
+          url: n.content.url,
+          start: s?.[1] || 'N/A',
+          end: e?.[1] || 'N/A'
+        }
+      });
+    },
+    initProgress(){
+      const closed = this.issues.filter(i=>i.state==='CLOSED').length;
+      const total = this.issues.length || 1;
+      this.progressText = `${closed}/${total}`;
+      lottie.loadAnimation({
+        container: document.getElementById('progressAnim'),
+        renderer:'svg',
+        loop:true,
+        autoplay:true,
+        path:'https://assets10.lottiefiles.com/packages/lf20_jcikwtux.json'
+      });
+    },
+    initSwiper(){
+      if(this.view!=='week') return;
+      new Swiper('.swiper',{slidesPerView:1});
+    },
+    renderMermaid(){
+      mermaid.initialize({ startOnLoad:false });
+      document.getElementById('wikiGraph').textContent =
+        'graph LR\nIssue-->Wiki';
+      document.getElementById('discussionGraph').textContent =
+        'graph LR\nIssue-->Discussion';
+      mermaid.run();
+    },
+    animate(el){
+      motion.animate(el,{opacity:[0,1],y:[20,0]},{duration:0.5});
+    },
+    toggleDark(){
+      document.documentElement.classList.toggle('dark');
+    }
+  }
 }
-})
-}catch(e){console.error(e)}
-},
-
-calcProgress(){
-const all=this.items.length
-const closed=this.items.filter(i=>i.state==='CLOSED').length
-this.progress=Math.round((closed/all)*100)
-},
-
-initLottie(){
-lottie.loadAnimation({
-container:document.getElementById('progress'),
-renderer:'svg',
-loop:true,
-autoplay:true,
-path:'https://assets10.lottiefiles.com/packages/lf20_jcikwtux.json'
-})
-},
-
-renderCalendar(){
-const svg=document.getElementById('calendar')
-svg.innerHTML=''
-this.items.forEach((i,idx)=>{
-const r=document.createElementNS('http://www.w3.org/2000/svg','rect')
-r.setAttribute('x',20)
-r.setAttribute('y',idx*30+20)
-r.setAttribute('width',300)
-r.setAttribute('height',20)
-r.setAttribute('class', i.state==='CLOSED'?'issue-closed':'issue-open')
-svg.appendChild(r)
-motion.animate(r,{opacity:[0,1],x:[-50,0]},{duration:0.6})
-})
-}
-}}
 </script>
 
 </body>
