@@ -3,7 +3,7 @@ Visualize ideas as tasks.
 
 ## Usage
 1. Please copy and paste the markdown from the [AI Prompt](#prompt) into each LLM.
-2. Create or transcribe the output results into new discussions for Ideas. [(Ex)](https://github.com/Uchida16104/TaskList/discussions/new?category=ideas)
+2. Create or transcribe the output results into new discussions for Ideas. [(Ex)](https://github.com/Uchida16104/TaskBoard/discussions/new?category=ideas)
 3. Please select one of the following labels: “approved”, “rejected”. or “needs-review”. <br />***(Please set to add these label for the first time.)***
 4. The discussion will be, 
 * closed when you select "rejected". 
@@ -27,14 +27,14 @@ Visualize ideas as tasks.
 
 ## Reference
 ### Wiki
-* [Design Notes](https://github.com/Uchida16104/TaskList/wiki/Design-Notes)
-* [Project Rules](https://github.com/Uchida16104/TaskList/wiki/Project-Rules)
+* [Design Notes](https://github.com/Uchida16104/TaskBoard/wiki/Design-Notes)
+* [Project Rules](https://github.com/Uchida16104/TaskBoard/wiki/Project-Rules)
 
-<div id="prompt"><h4><a href="https://uchida16104.github.io/Task-Board/wiki/">AI Prompt</a></h4>
+<div id="prompt"><h4><a href="https://uchida16104.github.io/TaskBoard/wiki/">AI Prompt</a></h4>
 
-* [ChatGPT](https://github.com/Uchida16104/Task-Board/wiki/Prompt-for-ChatGPT)
-* [Claude](https://github.com/Uchida16104/Task-Board/wiki/Prompt-for-Claude)
-* [Gemini](https://github.com/Uchida16104/Task-Board/wiki/Prompt-for-Gemini)
+* [ChatGPT](https://github.com/Uchida16104/TaskBoard/wiki/Prompt-for-ChatGPT)
+* [Claude](https://github.com/Uchida16104/TaskBoard/wiki/Prompt-for-Claude)
+* [Gemini](https://github.com/Uchida16104/TaskBoard/wiki/Prompt-for-Gemini)
 
 </div>
 
