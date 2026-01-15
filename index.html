@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>TaskBoard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/htmx.org@1.9.4"></script>
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script src="https://unpkg.com/hyperscript.org@0.9.9"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/motionone@latest/dist/motion.min.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0/dist/shoelace.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0/dist/themes/light.css">
+</head>
+<body class="font-sans bg-gray-50 text-gray-800 p-6">
+
+<header class="max-w-4xl mx-auto mb-4">
+  <h1 class="text-3xl font-bold">TaskBoard</h1>
+  <nav class="space-x-4 text-blue-600">
+    <a 
+      href="#home"
+      hx-get="/"
+      hx-target="#content"
+      hx-push-url="true"
+      class="hover:underline"
+    >Home</a>
+    <a 
+      href="https://uchida16104.github.io/TaskBoard/wiki/"
+      hx-get="https://uchida16104.github.io/TaskBoard/wiki/"
+      hx-target="#content"
+      hx-push-url="true"
+      class="hover:underline"
+    >Wiki</a>
+    <a 
+      href="https://uchida16104.github.io/TaskBoard/docs/"
+      hx-get="https://uchida16104.github.io/TaskBoard/docs/"
+      hx-target="#content"
+      hx-push-url="true"
+      class="hover:underline"
+    >Progress</a>
+  </nav>
+</header>
+
+<main id="content" class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
+
+  <!-- README HTML content -->
+  <section id="home-content">
+    <h2 class="text-2xl font-semibold mb-2">Visualize ideas as tasks.</h2>
+
+    <section class="mb-4">
+      <h3 class="text-xl font-semibold">Usage</h3>
+      <ol class="list-decimal list-inside">
+        <li>Copy and paste markdown from the <a href="#prompt" class="text-blue-600 hover:underline">AI Prompt</a> into each LLM.</li>
+        <li>Create or transcribe output results into new discussions for Ideas.</li>
+        <li>Select one label: “approved”, “rejected”, or “needs-review”.</li>
+      </ol>
+      <p class="text-sm text-gray-600 italic mt-2">First time: set these labels properly.</p>
+    </section>
+
+    <section class="mb-4">
+      <h4 class="font-semibold">Discussion Behavior</h4>
+      <ul class="list-disc list-inside">
+        <li>Closed when “rejected”.</li>
+        <li>No change when “needs-review”.</li>
+        <li>Opened when “approved”.</li>
+      </ul>
+      <p class="text-sm text-gray-600 italic">Projects number and views number optional.</p>
+    </section>
+
+    <section class="mb-4">
+      <h4 class="font-semibold">Columns</h4>
+      <table class="table-auto border-collapse border border-gray-300">
+        <thead><tr><th class="border px-2 py-1">Column Name</th></tr></thead>
+        <tbody>
+          <tr><td class="border px-2 py-1">Backlog</td></tr>
+          <tr><td class="border px-2 py-1">Todo</td></tr>
+          <tr><td class="border px-2 py-1">Doing</td></tr>
+          <tr><td class="border px-2 py-1">Done</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="mb-4">
+      <h4 class="font-semibold">Caution</h4>
+      <p>Do not open Issues.</p>
+    </section>
+
+  </section>
+
+</main>
+
+</body>
+</html>
