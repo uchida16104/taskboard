@@ -57,7 +57,7 @@
       <button @click="view='month'" class="btn">Month</button>
       <button @click="view='week'" class="btn">Week</button>
       <button @click="view='day'" class="btn">Day</button>
-      <button hx-get="../wiki/index.html" hx-target="#app" hx-swap="innerHTML" hx-push-url="true">Wiki</button>
+      <a href="../wiki/index.html" hx-push-url="true" style="color: black; text-decoration: none;">Wiki</a>
     </div>
   </div>
 
@@ -73,7 +73,6 @@
     <div id="progress"></div>
   </div>
 </div>
-<div id="app"></div>
 
 <script>
 function app(){
