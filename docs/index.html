@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja" class="h-full" x-data="app()" x-init="init()">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TaskBoard Calendar</title>
 
 <!-- Tailwind -->
@@ -17,189 +17,159 @@
 <!-- hyperscript -->
 <script src="https://unpkg.com/hyperscript.org@latest"></script>
 
-<!-- AOS -->
-<link rel="stylesheet" href="https://unpkg.com/aos@latest/dist/aos.css">
-<script src="https://unpkg.com/aos@latest/dist/aos.js"></script>
-
-<!-- Swiper -->
-<link rel="stylesheet" href="https://unpkg.com/swiper@latest/swiper-bundle.min.css">
-<script src="https://unpkg.com/swiper@latest/swiper-bundle.min.js"></script>
-
-<!-- Mermaid -->
-<script src="https://unpkg.com/mermaid@latest/dist/mermaid.min.js"></script>
-
-<!-- Lottie -->
-<script src="https://unpkg.com/lottie-web@latest/build/player/lottie.min.js"></script>
-
 <!-- Shoelace -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@latest/dist/themes/light.css">
 <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@latest/dist/shoelace.js"></script>
 
-<!-- Iconify -->
-<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<!-- Swiper -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@latest/swiper-bundle.min.css">
+<script src="https://cdn.jsdelivr.net/npm/swiper@latest/swiper-bundle.min.js"></script>
+
+<!-- Mermaid -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@latest/dist/mermaid.min.js"></script>
+
+<!-- Lottie -->
+<script src="https://unpkg.com/lottie-web@latest/build/player/lottie.min.js"></script>
 
 <!-- Motion One -->
-<script src="https://unpkg.com/motion@latest/dist/motion.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@motionone/dom@latest/dist/motion-one.umd.min.js"></script>
+
+<!-- Iconify -->
+<script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
 
 <style>
-  [x-cloak] { display:none }
+.issue-open { background:#22c55e }
+.issue-closed { background:#64748b }
 </style>
 </head>
 
-<body class="h-full bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+<body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100">
 
-<header class="p-4 flex justify-between items-center">
-  <h1 class="text-2xl font-bold">TaskBoard Calendar</h1>
-
+<header class="p-4 flex justify-between items-center border-b">
+  <h1 class="text-xl font-bold flex items-center gap-2">
+    <span class="iconify" data-icon="mdi:calendar-check"></span>
+    TaskBoard Calendar
+  </h1>
   <sl-switch @sl-change="toggleDark()">Dark</sl-switch>
 </header>
 
-<!-- VIEW SWITCH -->
-<nav class="flex gap-2 p-4">
-  <button class="px-3 py-1 bg-blue-600 text-white rounded"
-    hx-get="?view=month" hx-push-url="true" @click="view='month'">Month</button>
-  <button class="px-3 py-1 bg-blue-600 text-white rounded"
-    hx-get="?view=week" hx-push-url="true" @click="view='week'">Week</button>
-  <button class="px-3 py-1 bg-blue-600 text-white rounded"
-    hx-get="?view=day" hx-push-url="true" @click="view='day'">Day</button>
-</nav>
+<main class="p-4 space-y-6">
 
-<!-- PROGRESS -->
-<section class="p-4">
-  <div class="flex items-center gap-4">
-    <div id="progressAnim" class="w-24 h-24"></div>
-    <div>
-      <p class="text-lg font-semibold">Progress</p>
-      <p x-text="progressText"></p>
+<!-- View Switch -->
+<div class="flex gap-2">
+  <button class="btn" @click="setView('month')" hx-push-url="true">Month</button>
+  <button class="btn" @click="setView('week')" hx-push-url="true">Week</button>
+  <button class="btn" @click="setView('day')" hx-push-url="true">Day</button>
+</div>
+
+<!-- Progress -->
+<div class="flex items-center gap-4">
+  <div id="lottie" class="w-24 h-24"></div>
+  <div>
+    <p class="text-lg font-semibold">Progress</p>
+    <p x-text="progress+'%'"></p>
+  </div>
+</div>
+
+<!-- Calendar -->
+<section x-show="view==='month'" class="grid grid-cols-7 gap-2">
+  <template x-for="day in monthDays">
+    <div class="border p-2 min-h-[120px]">
+      <div class="text-sm font-bold" x-text="day.date"></div>
+      <template x-for="i in day.items">
+        <a :href="i.url" target="_blank"
+           class="block text-xs mt-1 text-white px-1 rounded"
+           :class="i.state==='OPEN'?'issue-open':'issue-closed'">
+          <span x-text="i.title"></span>
+        </a>
+      </template>
     </div>
+  </template>
+</section>
+
+<!-- Week -->
+<section x-show="view==='week'" class="swiper">
+  <div class="swiper-wrapper">
+    <template x-for="d in weekDays">
+      <div class="swiper-slide p-4 border">
+        <h3 x-text="d.date"></h3>
+        <template x-for="i in d.items">
+          <a :href="i.url" target="_blank" class="block text-sm underline">
+            <span x-text="i.title"></span>
+          </a>
+        </template>
+      </div>
+    </template>
   </div>
 </section>
 
-<!-- CALENDAR -->
-<section class="p-4">
-
-  <!-- MONTH -->
-  <template x-if="view==='month'">
-    <div class="grid grid-cols-7 gap-2">
-      <template x-for="issue in issues">
-        <div class="p-2 rounded border"
-          :class="issue.state==='CLOSED'?'bg-green-200':'bg-yellow-200'"
-          x-init="animate($el)">
-          <a :href="issue.url" target="_blank" class="font-semibold block"
-            x-text="issue.title"></a>
-          <small x-text="issue.start + ' → ' + issue.end"></small>
-        </div>
-      </template>
-    </div>
-  </template>
-
-  <!-- WEEK -->
-  <template x-if="view==='week'">
-    <div class="swiper">
-      <div class="swiper-wrapper">
-        <template x-for="issue in issues">
-          <div class="swiper-slide p-4 border rounded">
-            <a :href="issue.url" target="_blank" x-text="issue.title"></a>
-          </div>
-        </template>
-      </div>
-    </div>
-  </template>
-
-  <!-- DAY -->
-  <template x-if="view==='day'">
-    <ul>
-      <template x-for="issue in issues">
-        <li class="mb-2">
-          <a :href="issue.url" target="_blank" x-text="issue.title"></a>
-        </li>
-      </template>
-    </ul>
-  </template>
-
+<!-- Mermaid -->
+<section>
+  <h2 class="font-bold mb-2">Relations</h2>
+  <div class="mermaid" x-text="mermaidText"></div>
 </section>
 
-<!-- TABS -->
-<section class="p-4">
-<sl-tab-group>
-  <sl-tab slot="nav" panel="wiki">Wiki</sl-tab>
-  <sl-tab slot="nav" panel="discussion">Discussion</sl-tab>
-
-  <sl-tab-panel name="wiki">
-    <div id="wikiGraph" class="mermaid"></div>
-  </sl-tab-panel>
-
-  <sl-tab-panel name="discussion">
-    <div id="discussionGraph" class="mermaid"></div>
-  </sl-tab-panel>
-</sl-tab-group>
-</section>
+</main>
 
 <script>
 function app(){
-  return {
-    issues: [],
-    view: new URLSearchParams(location.search).get('view') || 'month',
-    progressText: '',
-    async init(){
-      AOS.init();
-      await this.loadData();
-      this.initProgress();
-      this.initSwiper();
-      this.renderMermaid();
-    },
-    async loadData(){
-      const res = await fetch(
-        'https://raw.githubusercontent.com/Uchida16104/TaskBoard/refs/heads/main/docs/data/projects.json',
-        { cache:'no-store' }
-      );
-      const json = await res.json();
-      const nodes = json?.data?.user?.projectV2?.items?.nodes || [];
-      this.issues = nodes.map(n=>{
-        const body = n.content?.body || '';
-        const s = body.match(/start:\s*(\d{4}-\d{2}-\d{2})/);
-        const e = body.match(/end:\s*(\d{4}-\d{2}-\d{2})/);
-        return {
-          title: n.content.title,
-          state: n.content.state,
-          url: n.content.url,
-          start: s?.[1] || 'N/A',
-          end: e?.[1] || 'N/A'
-        }
-      });
-    },
-    initProgress(){
-      const closed = this.issues.filter(i=>i.state==='CLOSED').length;
-      const total = this.issues.length || 1;
-      this.progressText = `${closed}/${total}`;
-      lottie.loadAnimation({
-        container: document.getElementById('progressAnim'),
-        renderer:'svg',
-        loop:true,
-        autoplay:true,
-        path:'https://assets10.lottiefiles.com/packages/lf20_jcikwtux.json'
-      });
-    },
-    initSwiper(){
-      if(this.view!=='week') return;
-      new Swiper('.swiper',{slidesPerView:1});
-    },
-    renderMermaid(){
-      mermaid.initialize({ startOnLoad:false });
-      document.getElementById('wikiGraph').textContent =
-        'graph LR\nIssue-->Wiki';
-      document.getElementById('discussionGraph').textContent =
-        'graph LR\nIssue-->Discussion';
-      mermaid.run();
-    },
-    animate(el){
-      motion.animate(el,{opacity:[0,1],y:[20,0]},{duration:0.5});
-    },
-    toggleDark(){
-      document.documentElement.classList.toggle('dark');
-    }
+return{
+  view:'month',
+  items:[],
+  monthDays:[],
+  weekDays:[],
+  progress:0,
+  mermaidText:'graph TD',
+  async init(){
+    mermaid.initialize({startOnLoad:true})
+    await this.load()
+    this.calc()
+    this.render()
+    lottie.loadAnimation({
+      container:document.getElementById('lottie'),
+      renderer:'svg',
+      loop:true,
+      autoplay:true,
+      path:'https://assets9.lottiefiles.com/packages/lf20_touohxv0.json'
+    })
+  },
+  async load(){
+    const res = await fetch('https://raw.githubusercontent.com/Uchida16104/TaskBoard/refs/heads/main/docs/data/projects.json')
+    const json = await res.json()
+    this.items = json.data.user.projectV2.items.nodes.map(n=>{
+      const b = n.content.body||''
+      const s = b.match(/start:\s*([0-9\/\-]+)/i)?.[1]
+      const e = b.match(/end:\s*([0-9\/\-]+)/i)?.[1]
+      return {...n.content,start:s,end:e}
+    })
+  },
+  calc(){
+    const closed=this.items.filter(i=>i.state==='CLOSED').length
+    this.progress=Math.round(closed/this.items.length*100)
+  },
+  render(){
+    const today=new Date()
+    this.monthDays=[...Array(31)].map((_,i)=>{
+      const d=new Date(today.getFullYear(),today.getMonth(),i+1)
+      return{
+        date:d.getDate(),
+        items:this.items.filter(it=>{
+          const s=new Date(it.start||d)
+          const e=new Date(it.end||d)
+          return d>=s && d<=e
+        })
+      }
+    })
+    this.mermaidText+='\\n'
+    this.items.forEach(i=>{
+      this.mermaidText+=`Issue_${i.title.replace(/\\W/g,'_')}-->Wiki\n`
+    })
+  },
+  setView(v){this.view=v},
+  toggleDark(){
+    document.documentElement.classList.toggle('dark')
   }
-}
+}}
 </script>
 
 </body>
