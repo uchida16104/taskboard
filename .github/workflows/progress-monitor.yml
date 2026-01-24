@@ -3,6 +3,7 @@ name: Progress Monitor
 on:
   schedule:
     - cron: '0 0 * * *'
+  workflow_dispatch:
 
 permissions:
   issues: write
@@ -19,36 +20,103 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const issues = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: 'from-discussion'
-            });
+            try {
+              const issues = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: 'from-discussion'
+              });
 
-            const now = new Date();
-            const oneWeek = 7 * 24 * 60 * 60 * 1000;
-            const oneMonth = 30 * 24 * 60 * 60 * 1000;
+              const now = new Date();
+              const oneWeek = 7 * 24 * 60 * 60 * 1000;
+              const oneMonth = 30 * 24 * 60 * 60 * 1000;
 
-            for (const issue of issues.data) {
-              const updated = new Date(issue.updated_at);
-              const diff = now - updated;
+              core.info(`Found ${issues.data.length} open issues to check`);
 
-              if (diff >= oneMonth) {
-                await github.rest.issues.update({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  state: 'closed'
-                });
-                console.log(`Closed issue #${issue.number} due to 1 month inactivity`);
-              } else if (diff >= oneWeek) {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  body: '⚠️ This issue has not been updated for more than 1 week. Please check progress.'
-                });
-                console.log(`Alerted issue #${issue.number} due to 1 week inactivity`);
+              for (const issue of issues.data) {
+                const updated = new Date(issue.updated_at);
+                const diff = now - updated;
+                const daysInactive = Math.floor(diff / (24 * 60 * 60 * 1000));
+
+                if (diff >= oneMonth) {
+                  await github.rest.issues.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    state: 'closed',
+                    state_reason: 'not_planned'
+                  });
+                  
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `🔒 **Auto-closed due to inactivity**\n\nThis issue has been inactive for ${daysInactive} days (threshold: 30 days).\n\nIf this task is still relevant, please reopen it and provide an update.`
+                  });
+                  
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    labels: ['auto-closed']
+                  });
+                  
+                  core.info(`Closed issue #${issue.number} due to ${daysInactive} days inactivity`);
+                } else if (diff >= oneWeek) {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    body: `⚠️ **Inactivity Warning**\n\nThis issue has not been updated for ${daysInactive} days.\n\n**Action required:**\n- Update progress status\n- Move task on project board if applicable\n- Close if no longer relevant\n\nThis issue will be auto-closed after 30 days of inactivity.`
+                  });
+                  
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    labels: ['needs-attention']
+                  });
+                  
+                  core.info(`Alerted issue #${issue.number} due to ${daysInactive} days inactivity`);
+                }
               }
+              
+              core.info('Progress monitoring completed successfully');
+            } catch (error) {
+              core.setFailed(`Progress monitoring failed: ${error.message}`);
+            }
+
+      - name: Generate summary report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              const issues = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'all'
+              });
+
+              const openCount = issues.data.filter(i => i.state === 'open').length;
+              const closedCount = issues.data.filter(i => i.state === 'closed').length;
+              const needsAttention = issues.data.filter(i => 
+                i.labels.some(l => l.name === 'needs-attention')
+              ).length;
+
+              core.summary
+                .addHeading('TaskBoard Progress Report')
+                .addTable([
+                  [{data: 'Metric', header: true}, {data: 'Count', header: true}],
+                  ['Total Issues', String(issues.data.length)],
+                  ['Open Issues', String(openCount)],
+                  ['Closed Issues', String(closedCount)],
+                  ['Needs Attention', String(needsAttention)],
+                  ['Completion Rate', `${Math.round((closedCount / issues.data.length) * 100)}%`]
+                ])
+                .write();
+                
+              core.info('Summary report generated');
+            } catch (error) {
+              core.warning(`Could not generate summary: ${error.message}`);
             }
