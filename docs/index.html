@@ -301,16 +301,17 @@
             </h2>
             <div class="mermaid-container">
                 <div class="mermaid">
-                    graph LR
-                    A[Test Tasks] --> D[Review]
-                    B[Infrastructure] --> D
-                    C[Mental Health] --> D
-                    D --> E[Integration]
-                    E --> F[Deploy]
-                    style A fill:#f5576c
-                    style B fill:#00f2fe
-                    style C fill:#38f9d7
-                    style F fill:#43e97b
+                    graph TB
+                    A[💡 Idea] --> B[📝 Create Discussion]
+                    B --> C{🏷️ Label Selection}
+                    C -->|✅ Approved| D[📋 Open Task/Issue]
+                    C -->|❌ Rejected| E[🚫 Close Discussion]
+                    C -->|🤔 Needs Review| F[⏸️ Pending]
+                    D --> G[📊 Add to Project Board]
+                    G --> H[📦 Backlog]
+                    H --> I[📝 Todo]
+                    I --> J[⚙️ Doing]
+                    J --> K[✅ Done]
                 </div>
             </div>
         </div>
@@ -390,31 +391,6 @@
                     </template>
                 </div>
                 <div class="swiper-pagination mt-6"></div>
-            </div>
-        </div>
-        
-        <!-- Category Breakdown -->
-        <div class="glass-effect rounded-2xl p-8 mb-8" data-aos="fade-up">
-            <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-                <span class="iconify" data-icon="mdi:tag-multiple"></span>
-                Task Categories
-            </h2>
-            <div class="space-y-4">
-                <template x-for="category in categories" :key="category.name">
-                    <div class="glass-effect p-4 rounded-xl">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center gap-3">
-                                <span class="iconify text-3xl" :data-icon="category.icon" :style="`color: ${category.color}`"></span>
-                                <span class="text-white font-semibold text-lg" x-text="category.name"></span>
-                            </div>
-                            <span class="text-white text-2xl font-bold" x-text="category.count"></span>
-                        </div>
-                        <div class="h-2 bg-white bg-opacity-20 rounded-full overflow-hidden">
-                            <div class="h-full transition-all duration-500" 
-                                 :style="`width: ${(category.count/totalTasks)*100}%; background: ${category.color}`"></div>
-                        </div>
-                    </div>
-                </template>
             </div>
         </div>
         
@@ -568,7 +544,7 @@
                     return days;
                 },
                 
-                get categories() {
+                categories() {
                     const cats = [
                         { name: 'Test', icon: 'mdi:test-tube', color: '#f5576c', count: 0 },
                         { name: 'Infrastructure', icon: 'mdi:server', color: '#00f2fe', count: 0 },
