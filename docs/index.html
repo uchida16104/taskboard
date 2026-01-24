@@ -301,16 +301,17 @@
             </h2>
             <div class="mermaid-container">
                 <div class="mermaid">
-                    graph LR
-                    A[Test Tasks] --> D[Review]
-                    B[Infrastructure] --> D
-                    C[Mental Health] --> D
-                    D --> E[Integration]
-                    E --> F[Deploy]
-                    style A fill:#f5576c
-                    style B fill:#00f2fe
-                    style C fill:#38f9d7
-                    style F fill:#43e97b
+                    graph TB
+                    A[💡 Idea] --> B[📝 Create Discussion]
+                    B --> C{🏷️ Label Selection}
+                    C -->|✅ Approved| D[📋 Open Task/Issue]
+                    C -->|❌ Rejected| E[🚫 Close Discussion]
+                    C -->|🤔 Needs Review| F[⏸️ Pending]
+                    D --> G[📊 Add to Project Board]
+                    G --> H[📦 Backlog]
+                    H --> I[📝 Todo]
+                    I --> J[⚙️ Doing]
+                    J --> K[✅ Done]
                 </div>
             </div>
         </div>
