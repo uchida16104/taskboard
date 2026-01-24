@@ -5,65 +5,201 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TaskBoard - Visualize ideas as tasks</title>
     
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+    
+    <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Hyperscript -->
     <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
+    
+    <!-- AOS (Animate On Scroll) -->
     <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    
+    <!-- Swiper -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     
+    <!-- Mermaid -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        window.mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
     </script>
     
+    <!-- Lottie Web -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+    
+    <!-- Shoelace -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/dark.css">
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
+    
+    <!-- Iconify -->
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+    
+    <!-- Motion One -->
     <script src="https://cdn.jsdelivr.net/npm/motion@11.2.0/dist/motion.min.js"></script>
+    
+    <!-- Marked.js -->
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-        * { font-family: 'Inter', sans-serif; }
-        html { scroll-behavior: smooth; }
-        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; overflow-x: hidden; }
-        .glass-effect { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border:1px solid rgba(255,255,255,0.2); box-shadow:0 8px 32px rgba(31,38,135,0.37); }
-        .nav-link { position: relative; transition: all 0.3s; }
-        .nav-link.active::after { content: ''; position: absolute; bottom:-8px; left:0; right:0; height:3px; background:white; border-radius:3px; }
-        .nav-link:hover { transform: translateY(-2px); }
-        .markdown-content { color:white; }
-        .markdown-content h1,h2,h3,h4 { margin-top:1.5rem; margin-bottom:1rem; font-weight:700; }
-        .markdown-content h1 { font-size:2rem; }
-        .markdown-content h2 { font-size:1.5rem; }
-        .markdown-content h3 { font-size:1.25rem; }
-        .markdown-content p { margin-bottom:1rem; line-height:1.6; }
-        .markdown-content ul,.markdown-content ol { margin-left:2rem; margin-bottom:1rem; }
-        .markdown-content li { margin-bottom:0.5rem; }
-        .markdown-content a { color:#4facfe; text-decoration:underline; }
-        .markdown-content a:hover { color:#00f2fe; }
-        .markdown-content table { width:100%; border-collapse:collapse; margin:1rem 0; }
-        .markdown-content table th,.markdown-content table td { border:1px solid rgba(255,255,255,0.2); padding:0.75rem; text-align:left; }
-        .markdown-content table th { background: rgba(255,255,255,0.1); font-weight:600; }
-        .markdown-content code { background: rgba(0,0,0,0.3); padding:0.2rem 0.4rem; border-radius:0.25rem; font-family:'Courier New', monospace; }
-        .markdown-content pre { background: rgba(0,0,0,0.3); padding:1rem; border-radius:0.5rem; overflow-x:auto; margin:1rem 0; }
-        .markdown-content blockquote { border-left: 4px solid rgba(255,255,255,0.3); padding-left:1rem; margin:1rem 0; font-style:italic; }
-        .mermaid-container { background: rgba(0,0,0,0.3); border-radius:1rem; padding:2rem; margin:2rem 0; }
-        [x-cloak] { display: none !important; }
-        .lottie-animation { width: 200px; height: 200px; }
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        .nav-link {
+            position: relative;
+            transition: all 0.3s;
+        }
+        
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: white;
+            border-radius: 3px;
+        }
+        
+        .nav-link:hover {
+            transform: translateY(-2px);
+        }
+        
+        .markdown-content {
+            color: white;
+        }
+        
+        .markdown-content h1,
+        .markdown-content h2,
+        .markdown-content h3,
+        .markdown-content h4 {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+        
+        .markdown-content h1 { font-size: 2rem; }
+        .markdown-content h2 { font-size: 1.5rem; }
+        .markdown-content h3 { font-size: 1.25rem; }
+        
+        .markdown-content p {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+        
+        .markdown-content ul,
+        .markdown-content ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .markdown-content li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .markdown-content a {
+            color: #4facfe;
+            text-decoration: underline;
+        }
+        
+        .markdown-content a:hover {
+            color: #00f2fe;
+        }
+        
+        .markdown-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        
+        .markdown-content table th,
+        .markdown-content table td {
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.75rem;
+            text-align: left;
+        }
+        
+        .markdown-content table th {
+            background: rgba(255, 255, 255, 0.1);
+            font-weight: 600;
+        }
+        
+        .markdown-content code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .markdown-content pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        
+        .markdown-content blockquote {
+            border-left: 4px solid rgba(255, 255, 255, 0.3);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            font-style: italic;
+        }
+        
+        .mermaid-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+        
+        [x-cloak] {
+            display: none !important;
+        }
+        
+        .lottie-animation {
+            width: 200px;
+            height: 200px;
+        }
     </style>
 </head>
 <body x-data="homeApp()" x-init="init()">
     
+    <!-- Loading Animation -->
     <div x-show="loading" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <div class="lottie-animation" id="loading-animation"></div>
     </div>
     
+    <!-- Main Container -->
     <div class="container mx-auto px-4 py-8">
         
+        <!-- Header with Navigation -->
         <header class="glass-effect rounded-2xl p-6 mb-8" data-aos="fade-down">
             <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
                 <div class="flex items-center gap-4">
@@ -74,6 +210,7 @@
                     </div>
                 </div>
                 
+                <!-- Navigation -->
                 <nav class="flex gap-4">
                     <a href="/TaskBoard/" 
                        class="nav-link active px-6 py-3 rounded-xl text-white font-semibold glass-effect hover:bg-white hover:bg-opacity-20 transition-all">
@@ -94,6 +231,7 @@
             </div>
         </header>
         
+        <!-- README Content -->
         <div class="glass-effect rounded-2xl p-8 mb-8" data-aos="fade-up">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center gap-3">
                 <span class="iconify" data-icon="mdi:information"></span>
@@ -102,36 +240,34 @@
             <div class="markdown-content" x-html="readmeContent"></div>
         </div>
         
+        <!-- Mermaid Diagram -->
         <div class="glass-effect rounded-2xl p-8 mb-8" data-aos="fade-up">
             <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
                 <span class="iconify" data-icon="mdi:sitemap"></span>
-                Official Task Workflow (Source of Truth)
+                Task Workflow
             </h2>
             <div class="mermaid-container">
-                <div class="mermaid" id="taskboard-mermaid">
+                <div class="mermaid">
                     graph TB
                     A[💡 Idea] --> B[📝 Create Discussion]
                     B --> C{🏷️ Label Selection}
-                    C -->|✅ Approved| D[📋 Open Task/Issue]
+                    C -->|✅ Approved| D[📋 Open Task]
                     C -->|❌ Rejected| E[🚫 Close Discussion]
                     C -->|🤔 Needs Review| F[⏸️ Pending]
-                    D --> G[📊 Add to Project Board]
+                    D --> G[📊 Project Board]
                     G --> H[📦 Backlog]
                     H --> I[📝 Todo]
                     I --> J[⚙️ Doing]
                     J --> K[✅ Done]
-                    style A fill:#667eea,color:#fff
-                    style D fill:#43e97b,color:#000
-                    style E fill:#f5576c,color:#fff
-                    style K fill:#4facfe,color:#fff
+                    style A fill:#667eea
+                    style D fill:#43e97b
+                    style E fill:#f5576c
+                    style K fill:#4facfe
                 </div>
-            </div>
-            <div class="mt-6 p-4 bg-yellow-500 bg-opacity-20 rounded-xl text-white">
-                <p class="font-semibold mb-2">⚠️ Important:</p>
-                <p>This Mermaid diagram is the <strong>source of truth</strong> for TaskBoard workflow. All code implementations must strictly follow this flow.</p>
             </div>
         </div>
         
+        <!-- Project Columns Guide -->
         <div class="glass-effect rounded-2xl p-8 mb-8" data-aos="fade-up">
             <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
                 <span class="iconify" data-icon="mdi:view-column"></span>
@@ -161,6 +297,7 @@
             </div>
         </div>
         
+        <!-- Footer -->
         <footer class="glass-effect rounded-2xl p-6 text-center" data-aos="fade-up">
             <div class="flex flex-col md:flex-row items-center justify-center gap-4 text-white text-opacity-80">
                 <span class="iconify text-2xl" data-icon="mdi:github"></span>
@@ -180,7 +317,12 @@
                 
                 async init() {
                     try {
-                        AOS.init({ duration:1000, once:true, mirror:false, offset:100 });
+                        AOS.init({
+                            duration: 1000,
+                            once: true,
+                            mirror: false,
+                            offset: 100
+                        });
                         
                         const loadingEl = document.getElementById('loading-animation');
                         if (loadingEl) {
@@ -194,17 +336,10 @@
                         }
                         
                         await this.loadReadme();
+                        
                         this.loading = false;
-
-                        // Mermaidの強制初期化
-                        if (window.mermaid) {
-                            window.mermaid.initialize({ startOnLoad: false, theme: 'dark' });
-                            const mermaids = document.querySelectorAll('.mermaid');
-                            window.mermaid.init(undefined, mermaids);
-                        }
                     } catch (error) {
                         console.error('Initialization error:', error);
-                        this.readmeContent = '<p>Error loading README content. Please check console for details.</p>';
                         this.loading = false;
                     }
                 },
@@ -212,7 +347,7 @@
                 async loadReadme() {
                     try {
                         const response = await fetch('https://raw.githubusercontent.com/Uchida16104/TaskBoard/refs/heads/main/README.md');
-                        if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+                        if (!response.ok) throw new Error('Failed to fetch README');
                         const markdown = await response.text();
                         this.readmeContent = marked.parse(markdown);
                     } catch (error) {
@@ -222,12 +357,12 @@
                             <p>Visualize ideas as tasks.</p>
                             <h2>Usage</h2>
                             <ol>
-                                <li>Copy and paste the markdown from the AI Prompt into each LLM.</li>
+                                <li>Please copy and paste the markdown from the AI Prompt into each LLM.</li>
                                 <li>Create or transcribe the output results into new discussions for Ideas.</li>
-                                <li>Select one of the following labels: "approved", "rejected", or "needs-review".</li>
-                                <li>The discussion will be closed when you select "rejected", do nothing when you select "needs-review", or opened when you select "approved".</li>
+                                <li>Please select one of the following labels: "approved", "rejected", or "needs-review".</li>
+                                <li>The discussion will be closed when you select "rejected", done nothing when you select "needs-review", or opened when you select "approved".</li>
                                 <li>Create project board columns: Backlog, Todo, Doing, Done.</li>
-                                <li>Move task tickets according to their progress status.</li>
+                                <li>Please move task tickets according to their progress status.</li>
                             </ol>
                             <h2>Caution</h2>
                             <ul>
@@ -241,8 +376,8 @@
             };
         }
         
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('TaskBoard Home loaded successfully');
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('TaskBoard Home loaded');
         });
     </script>
     
