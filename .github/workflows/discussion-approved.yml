@@ -15,6 +15,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Validate label and discussion
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const discussion = context.payload.discussion;
+            const label = context.payload.label;
+            
+            if (!discussion || !discussion.body) {
+              core.setFailed('Discussion body is missing or invalid');
+              return;
+            }
+            
+            if (label.name !== 'approved') {
+              core.setFailed('Label must be "approved"');
+              return;
+            }
+            
+            core.info(`Processing approved discussion: ${discussion.title}`);
+
       - name: Create issue from discussion
         uses: actions/github-script@v7
         with:
@@ -29,11 +48,45 @@ jobs:
               discussion.body + "\n\n" +
               "---\n\n" +
               "## Related Wiki\n" +
-              `https://github.com/${context.repo.owner}/${context.repo.repo}/wiki/Design-Notes`;
+              `https://github.com/${context.repo.owner}/${context.repo.repo}/wiki/Design-Notes\n\n` +
+              "---\n\n" +
+              "**Status:** Open (Created from approved discussion)\n" +
+              "**Next Step:** Move to project board (Backlog → Todo → Doing → Done)";
 
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: discussion.title,
-              body: body
-            });
+            try {
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: discussion.title,
+                body: body,
+                labels: ['from-discussion']
+              });
+              
+              core.info(`Issue created successfully: #${issue.data.number}`);
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: discussion.number,
+                body: `✅ This discussion has been approved and converted to issue #${issue.data.number}\n\nNext steps:\n1. The issue will be automatically added to the project board\n2. Move it through: Backlog → Todo → Doing → Done`
+              });
+            } catch (error) {
+              core.setFailed(`Failed to create issue: ${error.message}`);
+            }
+
+      - name: Add label to discussion
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const discussion = context.payload.discussion;
+            
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: discussion.number,
+                labels: ['converted-to-issue']
+              });
+            } catch (error) {
+              core.warning(`Could not add label to discussion: ${error.message}`);
+            }

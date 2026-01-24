@@ -12,19 +12,82 @@ jobs:
   close-discussion:
     if: github.event.label.name == 'rejected'
     runs-on: ubuntu-latest
+    
     steps:
+      - name: Validate label and discussion
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const discussion = context.payload.discussion;
+            const label = context.payload.label;
+            
+            if (!discussion) {
+              core.setFailed('Discussion is missing or invalid');
+              return;
+            }
+            
+            if (label.name !== 'rejected') {
+              core.setFailed('Label must be "rejected"');
+              return;
+            }
+            
+            core.info(`Processing rejected discussion: ${discussion.title}`);
+
+      - name: Add rejection comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const discussion = context.payload.discussion;
+            
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: discussion.number,
+                body: '❌ This discussion has been rejected and will be closed.\n\nReason: Does not align with project goals or current priorities.\n\nIf you believe this was done in error, please contact the maintainers.'
+              });
+            } catch (error) {
+              core.warning(`Could not add comment to discussion: ${error.message}`);
+            }
+
       - name: Close discussion
         uses: actions/github-script@v7
         with:
           script: |
             const discussionId = context.payload.discussion.node_id;
 
-            await github.graphql(`
-              mutation CloseDiscussion($id: ID!) {
-                closeDiscussion(input: { discussionId: $id }) {
-                  clientMutationId
+            try {
+              await github.graphql(`
+                mutation CloseDiscussion($id: ID!) {
+                  closeDiscussion(input: { discussionId: $id }) {
+                    discussion {
+                      id
+                      closed
+                    }
+                  }
                 }
-              }
-            `, {
-              id: discussionId
-            });
+              `, {
+                id: discussionId
+              });
+              
+              core.info('Discussion closed successfully');
+            } catch (error) {
+              core.setFailed(`Failed to close discussion: ${error.message}`);
+            }
+
+      - name: Add closed label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const discussion = context.payload.discussion;
+            
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: discussion.number,
+                labels: ['rejected-closed']
+              });
+            } catch (error) {
+              core.warning(`Could not add label to discussion: ${error.message}`);
+            }
