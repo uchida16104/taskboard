@@ -401,7 +401,7 @@
                 Task Categories
             </h2>
             <div class="space-y-4">
-                <template x-for="category in categories" :key="category.name">
+                <template x-for="category in categories()" :key="category.name">
                     <div class="glass-effect p-4 rounded-xl">
                         <div class="flex items-center justify-between mb-2">
                             <div class="flex items-center gap-3">
@@ -569,7 +569,7 @@
                     return days;
                 },
                 
-                get categories() {
+                categories() {
                     const cats = [
                         { name: 'Test', icon: 'mdi:test-tube', color: '#f5576c', count: 0 },
                         { name: 'Infrastructure', icon: 'mdi:server', color: '#00f2fe', count: 0 },
