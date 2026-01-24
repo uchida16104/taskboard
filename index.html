@@ -16,18 +16,7 @@
     
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ 
-            startOnLoad: true, 
-            theme: 'dark',
-            themeVariables: {
-                primaryColor: '#667eea',
-                primaryTextColor: '#fff',
-                primaryBorderColor: '#764ba2',
-                lineColor: '#764ba2',
-                secondaryColor: '#43e97b',
-                tertiaryColor: '#f5576c'
-            }
-        });
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
     </script>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
@@ -42,9 +31,6 @@
         
         * {
             font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
         }
         
         html {
@@ -60,14 +46,13 @@
         .glass-effect {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
         }
         
         .nav-link {
             position: relative;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s;
         }
         
         .nav-link.active::after {
@@ -87,7 +72,6 @@
         
         .markdown-content {
             color: white;
-            line-height: 1.8;
         }
         
         .markdown-content h1,
@@ -97,13 +81,11 @@
             margin-top: 1.5rem;
             margin-bottom: 1rem;
             font-weight: 700;
-            line-height: 1.3;
         }
         
         .markdown-content h1 { font-size: 2rem; }
         .markdown-content h2 { font-size: 1.5rem; }
         .markdown-content h3 { font-size: 1.25rem; }
-        .markdown-content h4 { font-size: 1.1rem; }
         
         .markdown-content p {
             margin-bottom: 1rem;
@@ -114,7 +96,6 @@
         .markdown-content ol {
             margin-left: 2rem;
             margin-bottom: 1rem;
-            padding-left: 0.5rem;
         }
         
         .markdown-content li {
@@ -124,7 +105,6 @@
         .markdown-content a {
             color: #4facfe;
             text-decoration: underline;
-            transition: color 0.2s;
         }
         
         .markdown-content a:hover {
@@ -154,7 +134,6 @@
             padding: 0.2rem 0.4rem;
             border-radius: 0.25rem;
             font-family: 'Courier New', monospace;
-            font-size: 0.9em;
         }
         
         .markdown-content pre {
@@ -165,17 +144,11 @@
             margin: 1rem 0;
         }
         
-        .markdown-content pre code {
-            background: transparent;
-            padding: 0;
-        }
-        
         .markdown-content blockquote {
             border-left: 4px solid rgba(255, 255, 255, 0.3);
             padding-left: 1rem;
             margin: 1rem 0;
             font-style: italic;
-            color: rgba(255, 255, 255, 0.9);
         }
         
         .mermaid-container {
@@ -183,24 +156,6 @@
             border-radius: 1rem;
             padding: 2rem;
             margin: 2rem 0;
-            overflow-x: auto;
-        }
-        
-        .mermaid {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 400px;
-        }
-        
-        .workflow-step {
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .workflow-step:hover {
-            transform: scale(1.05);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
         }
         
         [x-cloak] {
@@ -211,76 +166,16 @@
             width: 200px;
             height: 200px;
         }
-        
-        .pulse-animation {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: .5;
-            }
-        }
-        
-        .workflow-badge {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            border-radius: 9999px;
-            font-weight: 600;
-            font-size: 0.875rem;
-            margin: 0.25rem;
-            transition: all 0.2s;
-        }
-        
-        .workflow-badge:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-        
-        .badge-idea { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .badge-discussion { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        .badge-approved { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
-        .badge-rejected { background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%); }
-        .badge-review { background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%); }
-        .badge-issue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-        .badge-project { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
-        
-        .error-message {
-            background: rgba(245, 87, 108, 0.2);
-            border: 1px solid rgba(245, 87, 108, 0.5);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            color: white;
-            margin: 1rem 0;
-        }
-        
-        .success-message {
-            background: rgba(67, 233, 123, 0.2);
-            border: 1px solid rgba(67, 233, 123, 0.5);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            color: white;
-            margin: 1rem 0;
-        }
     </style>
 </head>
 <body x-data="homeApp()" x-init="init()">
     
-    <!-- Loading Screen -->
     <div x-show="loading" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-        <div class="text-center">
-            <div class="lottie-animation" id="loading-animation"></div>
-            <p class="text-white mt-4 pulse-animation">Loading TaskBoard...</p>
-        </div>
+        <div class="lottie-animation" id="loading-animation"></div>
     </div>
     
-    <!-- Main Container -->
     <div class="container mx-auto px-4 py-8">
         
-        <!-- Header with Navigation -->
         <header class="glass-effect rounded-2xl p-6 mb-8" data-aos="fade-down">
             <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
                 <div class="flex items-center gap-4">
@@ -291,8 +186,7 @@
                     </div>
                 </div>
                 
-                <!-- Navigation -->
-                <nav class="flex flex-wrap gap-4 justify-center">
+                <nav class="flex gap-4">
                     <a href="/TaskBoard/" 
                        class="nav-link active px-6 py-3 rounded-xl text-white font-semibold glass-effect hover:bg-white hover:bg-opacity-20 transition-all">
                         <span class="iconify mr-2" data-icon="mdi:home"></span>
@@ -312,7 +206,6 @@
             </div>
         </header>
         
-        <!-- README Content -->
         <div class="glass-effect rounded-2xl p-8 mb-8" data-aos="fade-up">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center gap-3">
                 <span class="iconify" data-icon="mdi:information"></span>
@@ -321,18 +214,11 @@
             <div class="markdown-content" x-html="readmeContent"></div>
         </div>
         
-        <!-- Official Workflow Diagram - SOURCE OF TRUTH -->
         <div class="glass-effect rounded-2xl p-8 mb-8" data-aos="fade-up">
-            <div class="mb-6">
-                <h2 class="text-2xl font-bold text-white mb-3 flex items-center gap-3">
-                    <span class="iconify" data-icon="mdi:sitemap"></span>
-                    Official Task Workflow (Source of Truth)
-                </h2>
-                <p class="text-white text-opacity-90 text-sm">
-                    This Mermaid diagram defines the <strong>exact workflow</strong> that all TaskBoard implementations must follow.
-                </p>
-            </div>
-            
+            <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                <span class="iconify" data-icon="mdi:sitemap"></span>
+                Official Task Workflow (Source of Truth)
+            </h2>
             <div class="mermaid-container">
                 <div class="mermaid">
                     graph TB
@@ -346,233 +232,131 @@
                     H --> I[📝 Todo]
                     I --> J[⚙️ Doing]
                     J --> K[✅ Done]
-                    
-                    style A fill:#667eea,stroke:#764ba2,stroke-width:3px,color:#fff
-                    style B fill:#f093fb,stroke:#f5576c,stroke-width:3px,color:#fff
-                    style C fill:#ffd89b,stroke:#19547b,stroke-width:3px,color:#333
-                    style D fill:#43e97b,stroke:#38f9d7,stroke-width:3px,color:#000
-                    style E fill:#f5576c,stroke:#f093fb,stroke-width:3px,color:#fff
-                    style F fill:#ffd89b,stroke:#19547b,stroke-width:3px,color:#333
-                    style G fill:#a8edea,stroke:#fed6e3,stroke-width:3px,color:#333
-                    style H fill:#ffd89b,stroke:#19547b,stroke-width:2px,color:#333
-                    style I fill:#4facfe,stroke:#00f2fe,stroke-width:2px,color:#fff
-                    style J fill:#f093fb,stroke:#f5576c,stroke-width:2px,color:#fff
-                    style K fill:#43e97b,stroke:#38f9d7,stroke-width:3px,color:#000
+                    style A fill:#667eea,color:#fff
+                    style D fill:#43e97b,color:#000
+                    style E fill:#f5576c,color:#fff
+                    style K fill:#4facfe,color:#fff
                 </div>
             </div>
-            
-            <!-- Workflow Compliance Notice -->
-            <div class="mt-6 p-4 bg-yellow-500 bg-opacity-20 rounded-xl border-2 border-yellow-500 border-opacity-50">
-                <div class="flex items-start gap-3">
-                    <span class="iconify text-3xl text-yellow-400 flex-shrink-0" data-icon="mdi:alert"></span>
-                    <div>
-                        <p class="font-semibold mb-2 text-white text-lg">⚠️ Critical: Workflow Compliance</p>
-                        <p class="text-white text-opacity-90">
-                            This Mermaid diagram is the <strong>single source of truth</strong> for TaskBoard workflow. 
-                            All code implementations, GitHub Actions, and UI behaviors <strong>must strictly follow this flow</strong>.
-                        </p>
-                        <p class="text-white text-opacity-90 mt-2">
-                            Any deviation between this diagram and actual system behavior is considered a <strong class="text-red-400">critical bug</strong> and must be fixed immediately.
-                        </p>
-                    </div>
-                </div>
+            <div class="mt-6 p-4 bg-yellow-500 bg-opacity-20 rounded-xl text-white">
+                <p class="font-semibold mb-2">⚠️ Important:</p>
+                <p>This Mermaid diagram is the <strong>source of truth</strong> for TaskBoard workflow. All code implementations must strictly follow this flow.</p>
             </div>
         </div>
         
-        <!-- Workflow Steps Breakdown -->
-        <div class="glass-effect rounded-2xl p-8 mb-8" data-aos="fade-up">
-            <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-                <span class="iconify" data-icon="mdi:list-status"></span>
-                Workflow Steps Explained
-            </h2>
-            
-            <div class="space-y-4">
-                <!-- Step 1: Idea -->
-                <div class="workflow-step glass-effect p-4 rounded-xl">
-                    <div class="flex items-start gap-4">
-                        <span class="workflow-badge badge-idea text-white">Step 1</span>
-                        <div class="flex-1">
-                            <h3 class="text-xl font-bold text-white mb-2">💡 Idea</h3>
-                            <p class="text-white text-opacity-80">
-                                Someone has an idea for a task, feature, or improvement. This is the starting point of the workflow.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Step 2: Create Discussion -->
-                <div class="workflow-step glass-effect p-4 rounded-xl">
-                    <div class="flex items-start gap-4">
-                        <span class="workflow-badge badge-discussion text-white">Step 2</span>
-                        <div class="flex-1">
-                            <h3 class="text-xl font-bold text-white mb-2">📝 Create Discussion</h3>
-                            <p class="text-white text-opacity-80">
-                                The idea is posted as a GitHub Discussion in the "Ideas" category. Use AI prompts to help structure the discussion.
-                            </p>
-                            <a href="https://github.com/Uchida16104/TaskBoard/discussions/new?category=ideas" 
-                               target="_blank"
-                               class="inline-block mt-2 text-blue-400 hover:text-blue-300 underline">
-                                → Create a new discussion
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Step 3: Label Selection -->
-                <div class="workflow-step glass-effect p-4 rounded-xl">
-                    <div class="flex items-start gap-4">
-                        <span class="workflow-badge badge-review text-white">Step 3</span>
-                        <div class="flex-1">
-                            <h3 class="text-xl font-bold text-white mb-2">🏷️ Label Selection (Decision Point)</h3>
-                            <p class="text-white text-opacity-80 mb-3">
-                                A maintainer reviews the discussion and applies ONE of these labels:
-                            </p>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <div class="bg-green-500 bg-opacity-20 border border-green-500 rounded-lg p-3">
-                                    <p class="font-semibold text-white">✅ approved</p>
-                                    <p class="text-sm text-white text-opacity-80">Creates issue → Project board</p>
-                                </div>
-                                <div class="bg-red-500 bg-opacity-20 border border-red-500 rounded-lg p-3">
-                                    <p class="font-semibold text-white">❌ rejected</p>
-                                    <p class="text-sm text-white text-opacity-80">Closes discussion</p>
-                                </div>
-                                <div class="bg-yellow-500 bg-opacity-20 border border-yellow-500 rounded-lg p-3">
-                                    <p class="font-semibold text-white">🤔 needs-review</p>
-                                    <p class="text-sm text-white text-opacity-80">Keeps pending</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Step 4a: Approved → Issue -->
-                <div class="workflow-step glass-effect p-4 rounded-xl">
-                    <div class="flex items-start gap-4">
-                        <span class="workflow-badge badge-approved text-white">Step 4a</span>
-                        <div class="flex-1">
-                            <h3 class="text-xl font-bold text-white mb-2">📋 Open Task/Issue (if approved)</h3>
-                            <p class="text-white text-opacity-80">
-                                When labeled "approved", a GitHub Action <strong>automatically creates an Issue</strong> from the discussion.
-                                The issue links back to the original discussion.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Step 4b: Rejected → Close -->
-                <div class="workflow-step glass-effect p-4 rounded-xl">
-                    <div class="flex items-start gap-4">
-                        <span class="workflow-badge badge-rejected text-white">Step 4b</span>
-                        <div class="flex-1">
-                            <h3 class="text-xl font-bold text-white mb-2">🚫 Close Discussion (if rejected)</h3>
-                            <p class="text-white text-opacity-80">
-                                When labeled "rejected", a GitHub Action <strong>automatically closes the discussion</strong>.
-                                A comment explains the rejection.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Step 4c: Needs Review → Pending -->
-                <div class="workflow-step glass-effect p-4 rounded-xl">
-                    <div class="flex items-start gap-4">
-                        <span class="workflow-badge badge-review text-white">Step 4c</span>
-                        <div class="flex-1">
-                            <h3 class="text-xl font-bold text-white mb-2">⏸️ Pending (if needs-review)</h3>
-                            <p class="text-white text-opacity-80">
-                                When labeled "needs-review", <strong>no automatic action occurs</strong>.
-                                The discussion remains open for further evaluation.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Step 5: Add to Project Board -->
-                <div class="workflow-step glass-effect p-4 rounded-xl">
-                    <div class="flex items-start gap-4">
-                        <span class="workflow-badge badge-project">Step 5</span>
-                        <div class="flex-1">
-                            <h3 class="text-xl font-bold text-white mb-2">📊 Add to Project Board</h3>
-                            <p class="text-white text-opacity-80">
-                                The newly created issue is <strong>automatically added to the GitHub Project board</strong>.
-                                Initial status is set to "Backlog".
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Steps 6-9: Board Progression -->
-                <div class="workflow-step glass-effect p-4 rounded-xl">
-                    <div class="flex items-start gap-4">
-                        <span class="workflow-badge badge-issue text-white">Steps 6-9</span>
-                        <div class="flex-1">
-                            <h3 class="text-xl font-bold text-white mb-2">📦 → 📝 → ⚙️ → ✅ Board Progression</h3>
-                            <p class="text-white text-opacity-80 mb-3">
-                                Tasks move through project board columns <strong>manually</strong> as work progresses:
-                            </p>
-                            <div class="flex flex-wrap gap-2">
-                                <span class="px-4 py-2 bg-yellow-500 bg-opacity-30 rounded-lg text-white font-semibold">Backlog</span>
-                                <span class="text-white text-2xl">→</span>
-                                <span class="px-4 py-2 bg-blue-500 bg-opacity-30 rounded-lg text-white font-semibold">Todo</span>
-                                <span class="text-white text-2xl">→</span>
-                                <span class="px-4 py-2 bg-purple-500 bg-opacity-30 rounded-lg text-white font-semibold">Doing</span>
-                                <span class="text-white text-2xl">→</span>
-                                <span class="px-4 py-2 bg-green-500 bg-opacity-30 rounded-lg text-white font-semibold">Done</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Project Board Columns -->
         <div class="glass-effect rounded-2xl p-8 mb-8" data-aos="fade-up">
             <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
                 <span class="iconify" data-icon="mdi:view-column"></span>
                 Project Board Columns
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="glass-effect p-6 rounded-xl text-center hover:scale-105 transition-transform">
+                <div class="glass-effect p-6 rounded-xl text-center">
                     <span class="iconify text-5xl text-yellow-400 mb-3" data-icon="mdi:archive"></span>
                     <h3 class="text-white text-xl font-bold mb-2">Backlog</h3>
                     <p class="text-white text-opacity-80 text-sm">Tasks waiting to be started</p>
-                    <div class="mt-3 px-3 py-1 bg-yellow-500 bg-opacity-20 rounded-full text-xs text-white">Initial Status</div>
                 </div>
-                <div class="glass-effect p-6 rounded-xl text-center hover:scale-105 transition-transform">
+                <div class="glass-effect p-6 rounded-xl text-center">
                     <span class="iconify text-5xl text-blue-400 mb-3" data-icon="mdi:clipboard-list"></span>
                     <h3 class="text-white text-xl font-bold mb-2">Todo</h3>
                     <p class="text-white text-opacity-80 text-sm">Tasks ready to be worked on</p>
-                    <div class="mt-3 px-3 py-1 bg-blue-500 bg-opacity-20 rounded-full text-xs text-white">Next Up</div>
                 </div>
-                <div class="glass-effect p-6 rounded-xl text-center hover:scale-105 transition-transform">
+                <div class="glass-effect p-6 rounded-xl text-center">
                     <span class="iconify text-5xl text-orange-400 mb-3" data-icon="mdi:cog"></span>
                     <h3 class="text-white text-xl font-bold mb-2">Doing</h3>
                     <p class="text-white text-opacity-80 text-sm">Tasks currently in progress</p>
-                    <div class="mt-3 px-3 py-1 bg-orange-500 bg-opacity-20 rounded-full text-xs text-white">In Progress</div>
                 </div>
-                <div class="glass-effect p-6 rounded-xl text-center hover:scale-105 transition-transform">
+                <div class="glass-effect p-6 rounded-xl text-center">
                     <span class="iconify text-5xl text-green-400 mb-3" data-icon="mdi:check-circle"></span>
                     <h3 class="text-white text-xl font-bold mb-2">Done</h3>
                     <p class="text-white text-opacity-80 text-sm">Completed tasks</p>
-                    <div class="mt-3 px-3 py-1 bg-green-500 bg-opacity-20 rounded-full text-xs text-white">Completed</div>
                 </div>
             </div>
         </div>
         
-        <!-- Quick Links -->
-        <div class="glass-effect rounded-2xl p-8 mb-8" data-aos="fade-up">
-            <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-                <span class="iconify" data-icon="mdi:link-variant"></span>
-                Quick Links
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <a href="https://github.com/Uchida16104/TaskBoard/discussions/new?category=ideas" 
-                   target="_blank"
-                   class="glass-effect p-4 rounded-xl hover:bg-white hover:bg-opacity-20 transition-all flex items-center gap-3">
-                    <span class="iconify text-3xl text-blue-400" data-icon="mdi:chat-plus"></span>
-                    <div>
-                        <p class="text-white font-semibold">Create Discussion</p>
-                        <p class="text-white text-opacity-70 text-sm">Start with an idea</p>
-                    </div>
-                </a>
-                <a href="https://github.com/Uchida16104/TaskBoard/discussions?discussions
+        <footer class="glass-effect rounded-2xl p-6 text-center" data-aos="fade-up">
+            <div class="flex flex-col md:flex-row items-center justify-center gap-4 text-white text-opacity-80">
+                <span class="iconify text-2xl" data-icon="mdi:github"></span>
+                <p>TaskBoard System | Auto-sync with GitHub Projects</p>
+                <span class="iconify text-2xl" data-icon="mdi:sync"></span>
+                <p class="text-sm">Developer: Hirotoshi Uchida</p>
+            </div>
+        </footer>
+        
+    </div>
+    
+    <script>
+        function homeApp() {
+            return {
+                loading: true,
+                readmeContent: '',
+                
+                async init() {
+                    try {
+                        AOS.init({
+                            duration: 1000,
+                            once: true,
+                            mirror: false,
+                            offset: 100
+                        });
+                        
+                        const loadingEl = document.getElementById('loading-animation');
+                        if (loadingEl) {
+                            lottie.loadAnimation({
+                                container: loadingEl,
+                                renderer: 'svg',
+                                loop: true,
+                                autoplay: true,
+                                path: 'https://assets5.lottiefiles.com/packages/lf20_p8bfn5to.json'
+                            });
+                        }
+                        
+                        await this.loadReadme();
+                        this.loading = false;
+                    } catch (error) {
+                        console.error('Initialization error:', error);
+                        this.readmeContent = '<p>Error loading README content. Please check console for details.</p>';
+                        this.loading = false;
+                    }
+                },
+                
+                async loadReadme() {
+                    try {
+                        const response = await fetch('https://raw.githubusercontent.com/Uchida16104/TaskBoard/refs/heads/main/README.md');
+                        if (!response.ok) {
+                            throw new Error(`HTTP error: ${response.status}`);
+                        }
+                        const markdown = await response.text();
+                        this.readmeContent = marked.parse(markdown);
+                    } catch (error) {
+                        console.error('Error loading README:', error);
+                        this.readmeContent = `
+                            <h1>TaskBoard</h1>
+                            <p>Visualize ideas as tasks.</p>
+                            <h2>Usage</h2>
+                            <ol>
+                                <li>Copy and paste the markdown from the AI Prompt into each LLM.</li>
+                                <li>Create or transcribe the output results into new discussions for Ideas.</li>
+                                <li>Select one of the following labels: "approved", "rejected", or "needs-review".</li>
+                                <li>The discussion will be closed when you select "rejected", do nothing when you select "needs-review", or opened when you select "approved".</li>
+                                <li>Create project board columns: Backlog, Todo, Doing, Done.</li>
+                                <li>Move task tickets according to their progress status.</li>
+                            </ol>
+                            <h2>Caution</h2>
+                            <ul>
+                                <li><strong>Not to open Issues</strong></li>
+                            </ul>
+                            <h2>Developer</h2>
+                            <p><strong>Hirotoshi Uchida</strong></p>
+                        `;
+                    }
+                }
+            };
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('TaskBoard Home loaded successfully');
+        });
+    </script>
+    
+</body>
+</html>
