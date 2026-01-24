@@ -1,60 +1,60 @@
+```html
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>TaskBoard - Visualize ideas as tasks</title>
-    
+
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+
+    <!-- External UI / animation libs (kept as in original) -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
     <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    
-    <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
-    </script>
-    
+
+    <!-- Use UMD build of Mermaid to avoid module import complexities -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/dark.css">
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@11.2.0/dist/motion.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
-    
+
+    <!-- Styles -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-        
-        * {
-            font-family: 'Inter', sans-serif;
-        }
-        
-        html {
-            scroll-behavior: smooth;
-        }
-        
+
+        * { font-family: "Inter", sans-serif; }
+
+        html { scroll-behavior: smooth; }
+
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             overflow-x: hidden;
+            margin: 0;
+            color: white;
         }
-        
+
         .glass-effect {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255,255,255,0.06);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
         }
-        
+
         .nav-link {
             position: relative;
             transition: all 0.3s;
         }
-        
+
         .nav-link.active::after {
             content: '';
             position: absolute;
@@ -65,15 +65,11 @@
             background: white;
             border-radius: 3px;
         }
-        
-        .nav-link:hover {
-            transform: translateY(-2px);
-        }
-        
-        .markdown-content {
-            color: white;
-        }
-        
+
+        .nav-link:hover { transform: translateY(-2px); }
+
+        .markdown-content { color: white; }
+
         .markdown-content h1,
         .markdown-content h2,
         .markdown-content h3,
@@ -82,100 +78,48 @@
             margin-bottom: 1rem;
             font-weight: 700;
         }
-        
-        .markdown-content h1 { font-size: 2rem; }
-        .markdown-content h2 { font-size: 1.5rem; }
-        .markdown-content h3 { font-size: 1.25rem; }
-        
-        .markdown-content p {
-            margin-bottom: 1rem;
-            line-height: 1.6;
-        }
-        
-        .markdown-content ul,
-        .markdown-content ol {
-            margin-left: 2rem;
-            margin-bottom: 1rem;
-        }
-        
-        .markdown-content li {
-            margin-bottom: 0.5rem;
-        }
-        
-        .markdown-content a {
-            color: #4facfe;
-            text-decoration: underline;
-        }
-        
-        .markdown-content a:hover {
-            color: #00f2fe;
-        }
-        
-        .markdown-content table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0;
-        }
-        
-        .markdown-content table th,
-        .markdown-content table td {
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 0.75rem;
-            text-align: left;
-        }
-        
-        .markdown-content table th {
-            background: rgba(255, 255, 255, 0.1);
-            font-weight: 600;
-        }
-        
+
+        .markdown-content p { margin-bottom: 1rem; line-height: 1.6; }
+        .markdown-content ul, .markdown-content ol { margin-left: 2rem; margin-bottom: 1rem; }
+        .markdown-content li { margin-bottom: 0.5rem; }
+        .markdown-content a { color: #4facfe; text-decoration: underline; }
+        .markdown-content a:hover { color: #00f2fe; }
+
         .markdown-content code {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0,0,0,0.3);
             padding: 0.2rem 0.4rem;
             border-radius: 0.25rem;
-            font-family: 'Courier New', monospace;
+            font-family: "Courier New", monospace;
         }
-        
+
         .markdown-content pre {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0,0,0,0.3);
             padding: 1rem;
             border-radius: 0.5rem;
             overflow-x: auto;
             margin: 1rem 0;
         }
-        
-        .markdown-content blockquote {
-            border-left: 4px solid rgba(255, 255, 255, 0.3);
-            padding-left: 1rem;
-            margin: 1rem 0;
-            font-style: italic;
-        }
-        
+
         .mermaid-container {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0,0,0,0.18);
             border-radius: 1rem;
-            padding: 2rem;
-            margin: 2rem 0;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
         }
-        
-        [x-cloak] {
-            display: none !important;
-        }
-        
-        .lottie-animation {
-            width: 200px;
-            height: 200px;
-        }
+
+        .lottie-animation { width: 140px; height: 140px; }
+
+        [x-cloak] { display: none !important; }
     </style>
 </head>
-<body x-data="homeApp()" x-init="init()">
-    
-    <div x-show="loading" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+
+<body>
+    <!-- Loading overlay (hidden by default) -->
+    <div id="loading-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display:none;">
         <div class="lottie-animation" id="loading-animation"></div>
     </div>
-    
+
     <div class="container mx-auto px-4 py-8">
-        
         <header class="glass-effect rounded-2xl p-6 mb-8" data-aos="fade-down">
             <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
                 <div class="flex items-center gap-4">
@@ -185,19 +129,19 @@
                         <p class="text-white text-opacity-80">Visualize ideas as tasks</p>
                     </div>
                 </div>
-                
+
                 <nav class="flex gap-4">
-                    <a href="/TaskBoard/" 
+                    <a href="/TaskBoard/"
                        class="nav-link active px-6 py-3 rounded-xl text-white font-semibold glass-effect hover:bg-white hover:bg-opacity-20 transition-all">
                         <span class="iconify mr-2" data-icon="mdi:home"></span>
                         Home
                     </a>
-                    <a href="/TaskBoard/wiki/" 
+                    <a href="/TaskBoard/wiki/"
                        class="nav-link px-6 py-3 rounded-xl text-white font-semibold glass-effect hover:bg-white hover:bg-opacity-20 transition-all">
                         <span class="iconify mr-2" data-icon="mdi:book-open-variant"></span>
                         AI Prompts
                     </a>
-                    <a href="/TaskBoard/docs/" 
+                    <a href="/TaskBoard/docs/"
                        class="nav-link px-6 py-3 rounded-xl text-white font-semibold glass-effect hover:bg-white hover:bg-opacity-20 transition-all">
                         <span class="iconify mr-2" data-icon="mdi:chart-box"></span>
                         Status
@@ -205,45 +149,55 @@
                 </nav>
             </div>
         </header>
-        
+
         <div class="glass-effect rounded-2xl p-8 mb-8" data-aos="fade-up">
             <h2 class="text-3xl font-bold text-white mb-6 flex items-center gap-3">
                 <span class="iconify" data-icon="mdi:information"></span>
                 About TaskBoard
             </h2>
-            <div class="markdown-content" x-html="readmeContent"></div>
+            <div id="readme" class="markdown-content">
+                <!-- Fallback content shown until README is fetched -->
+                <h1>TaskBoard</h1>
+                <p>Visualize ideas as tasks.</p>
+            </div>
         </div>
-        
+
         <div class="glass-effect rounded-2xl p-8 mb-8" data-aos="fade-up">
             <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
                 <span class="iconify" data-icon="mdi:sitemap"></span>
                 Official Task Workflow (Source of Truth)
             </h2>
+
             <div class="mermaid-container">
+                <!-- NOTE:
+                     Mermaid expects the plain diagram text directly inside an element with class="mermaid".
+                     Do NOT nest the diagram inside another element (that breaks mermaid parsing).
+                -->
                 <div class="mermaid">
-                    graph TB
-                    A[💡 Idea] --> B[📝 Create Discussion]
-                    B --> C{🏷️ Label Selection}
-                    C -->|✅ Approved| D[📋 Open Task/Issue]
-                    C -->|❌ Rejected| E[🚫 Close Discussion]
-                    C -->|🤔 Needs Review| F[⏸️ Pending]
-                    D --> G[📊 Add to Project Board]
-                    G --> H[📦 Backlog]
-                    H --> I[📝 Todo]
-                    I --> J[⚙️ Doing]
-                    J --> K[✅ Done]
-                    style A fill:#667eea,color:#fff
-                    style D fill:#43e97b,color:#000
-                    style E fill:#f5576c,color:#fff
-                    style K fill:#4facfe,color:#fff
+graph TB
+A[💡 Idea] --> B[📝 Create Discussion]
+B --> C{🏷️ Label Selection}
+C -->|✅ Approved| D[📋 Open Task/Issue]
+C -->|❌ Rejected| E[🚫 Close Discussion]
+C -->|🤔 Needs Review| F[⏸️ Pending]
+D --> G[📊 Add to Project Board]
+G --> H[📦 Backlog]
+H --> I[📝 Todo]
+I --> J[⚙️ Doing]
+J --> K[✅ Done]
+style A fill:#667eea,stroke:#444,stroke-width:1px,color:#fff
+style D fill:#43e97b,stroke:#2a7a3a,stroke-width:1px,color:#000
+style E fill:#f5576c,stroke:#a3333a,stroke-width:1px,color:#fff
+style K fill:#4facfe,stroke:#2e6fa8,stroke-width:1px,color:#fff
                 </div>
             </div>
+
             <div class="mt-6 p-4 bg-yellow-500 bg-opacity-20 rounded-xl text-white">
                 <p class="font-semibold mb-2">⚠️ Important:</p>
                 <p>This Mermaid diagram is the <strong>source of truth</strong> for TaskBoard workflow. All code implementations must strictly follow this flow.</p>
             </div>
         </div>
-        
+
         <div class="glass-effect rounded-2xl p-8 mb-8" data-aos="fade-up">
             <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
                 <span class="iconify" data-icon="mdi:view-column"></span>
@@ -272,7 +226,7 @@
                 </div>
             </div>
         </div>
-        
+
         <footer class="glass-effect rounded-2xl p-6 text-center" data-aos="fade-up">
             <div class="flex flex-col md:flex-row items-center justify-center gap-4 text-white text-opacity-80">
                 <span class="iconify text-2xl" data-icon="mdi:github"></span>
@@ -281,82 +235,108 @@
                 <p class="text-sm">Developer: Hirotoshi Uchida</p>
             </div>
         </footer>
-        
     </div>
-    
+
+    <!-- Application script: minimal, robust, and ordered to avoid initialization race conditions -->
     <script>
-        function homeApp() {
-            return {
-                loading: true,
-                readmeContent: '',
-                
-                async init() {
+        (function () {
+            // Initialize AOS when DOM is ready
+            document.addEventListener('DOMContentLoaded', function () {
+                if (window.AOS) {
+                    AOS.init({
+                        duration: 800,
+                        once: true,
+                        mirror: false,
+                        offset: 100
+                    });
+                }
+
+                // Initialize Lottie loading animation (if container present)
+                var loadingEl = document.getElementById('loading-animation');
+                if (loadingEl && window.lottie) {
                     try {
-                        AOS.init({
-                            duration: 1000,
-                            once: true,
-                            mirror: false,
-                            offset: 100
+                        lottie.loadAnimation({
+                            container: loadingEl,
+                            renderer: 'svg',
+                            loop: true,
+                            autoplay: true,
+                            path: 'https://assets5.lottiefiles.com/packages/lf20_p8bfn5to.json'
                         });
-                        
-                        const loadingEl = document.getElementById('loading-animation');
-                        if (loadingEl) {
-                            lottie.loadAnimation({
-                                container: loadingEl,
-                                renderer: 'svg',
-                                loop: true,
-                                autoplay: true,
-                                path: 'https://assets5.lottiefiles.com/packages/lf20_p8bfn5to.json'
-                            });
-                        }
-                        
-                        await this.loadReadme();
-                        this.loading = false;
-                    } catch (error) {
-                        console.error('Initialization error:', error);
-                        this.readmeContent = '<p>Error loading README content. Please check console for details.</p>';
-                        this.loading = false;
+                    } catch (e) {
+                        console.warn('Lottie init failed:', e);
                     }
-                },
-                
-                async loadReadme() {
+                }
+            });
+
+            // Configure Mermaid using the UMD API.
+            // Keep configuration explicit and tolerant to errors.
+            try {
+                if (window.mermaid && typeof window.mermaid.initialize === 'function') {
+                    mermaid.initialize({
+                        startOnLoad: true,
+                        theme: 'dark',
+                        flowchart: {
+                            useMaxWidth: true,
+                            htmlLabels: true
+                        },
+                        securityLevel: 'loose' // allow emojis and richer labels
+                    });
+                } else {
+                    console.warn('Mermaid not available on window.');
+                }
+            } catch (err) {
+                console.error('Mermaid initialization error:', err);
+            }
+
+            // Load README.md and insert as parsed HTML into #readme.
+            // Fallback content is already present in HTML.
+            async function loadReadme() {
+                var readmeEl = document.getElementById('readme');
+                var overlay = document.getElementById('loading-overlay');
+                try {
+                    if (overlay) overlay.style.display = 'flex';
+                    // Use the raw GitHub URL from the repository (same as original).
+                    var url = 'https://raw.githubusercontent.com/Uchida16104/TaskBoard/refs/heads/main/README.md';
+                    var resp = await fetch(url);
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    var md = await resp.text();
+                    // Use marked to convert markdown -> HTML
+                    if (window.marked && typeof marked.parse === 'function') {
+                        readmeEl.innerHTML = marked.parse(md);
+                    } else {
+                        readmeEl.textContent = md;
+                    }
+                } catch (err) {
+                    // If fetch fails (CORS or network), leave fallback content and log error
+                    console.warn('Could not load README.md:', err);
+                } finally {
+                    if (overlay) overlay.style.display = 'none';
+                }
+            }
+
+            // Trigger README load after a short delay (so initial paint is fast)
+            // This is still synchronous in the sense user requested — we perform it now.
+            loadReadme();
+
+            // Expose a small debug helper (optional)
+            window.TaskBoardDebug = {
+                reloadMermaid: function () {
                     try {
-                        const response = await fetch('https://raw.githubusercontent.com/Uchida16104/TaskBoard/refs/heads/main/README.md');
-                        if (!response.ok) {
-                            throw new Error(`HTTP error: ${response.status}`);
+                        if (window.mermaid && typeof window.mermaid.init === 'function') {
+                            // Re-scan the document for .mermaid elements
+                            mermaid.init(undefined, document.querySelectorAll('.mermaid'));
                         }
-                        const markdown = await response.text();
-                        this.readmeContent = marked.parse(markdown);
-                    } catch (error) {
-                        console.error('Error loading README:', error);
-                        this.readmeContent = `
-                            <h1>TaskBoard</h1>
-                            <p>Visualize ideas as tasks.</p>
-                            <h2>Usage</h2>
-                            <ol>
-                                <li>Copy and paste the markdown from the AI Prompt into each LLM.</li>
-                                <li>Create or transcribe the output results into new discussions for Ideas.</li>
-                                <li>Select one of the following labels: "approved", "rejected", or "needs-review".</li>
-                                <li>The discussion will be closed when you select "rejected", do nothing when you select "needs-review", or opened when you select "approved".</li>
-                                <li>Create project board columns: Backlog, Todo, Doing, Done.</li>
-                                <li>Move task tickets according to their progress status.</li>
-                            </ol>
-                            <h2>Caution</h2>
-                            <ul>
-                                <li><strong>Not to open Issues</strong></li>
-                            </ul>
-                            <h2>Developer</h2>
-                            <p><strong>Hirotoshi Uchida</strong></p>
-                        `;
+                    } catch (e) {
+                        console.error('reloadMermaid failed:', e);
                     }
                 }
             };
-        }
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('TaskBoard Home loaded successfully');
-        });
+        })();
     </script>
-    
+
+    <!-- Alpine.js moved to the end to avoid race with inline app code (minimal change approach).
+         If you don't use Alpine-specific attributes, this script can be removed; kept to maintain original feature set. -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
 </body>
 </html>
+```
