@@ -19,28 +19,74 @@ jobs:
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git pull --rebase origin main
+          git pull --rebase origin main || echo "Nothing to pull"
 
       - name: Fetch Projects v2
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
+          set -e
+          
           mkdir -p docs/data
-
+          
           cat > payload.json <<'EOF'
           {
-            "query": "query { user(login: \"Uchida16104\") { projectV2(number: 5) { title items(first: 100) { nodes { id content { __typename ... on Issue { title state url } } } } } } }"
+            "query": "query { user(login: \"Uchida16104\") { projectV2(number: 5) { title items(first: 100) { nodes { id content { __typename ... on Issue { title state url number labels(first: 10) { nodes { name } } createdAt updatedAt } } fieldValues(first: 10) { nodes { __typename ... on ProjectV2ItemFieldSingleSelectValue { name field { ... on ProjectV2SingleSelectField { name } } } } } } } } } }"
           }
           EOF
-
-          curl -s -X POST https://api.github.com/graphql \
+          
+          echo "Fetching project data..."
+          
+          response=$(curl -s -X POST https://api.github.com/graphql \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Content-Type: application/json" \
-            --data-binary @payload.json \
-            > docs/data/projects.json
+            --data-binary @payload.json)
+          
+          echo "$response" > docs/data/projects.json
+          
+          if echo "$response" | grep -q '"errors"'; then
+            echo "Error in GraphQL response:"
+            echo "$response" | jq '.errors'
+            exit 1
+          fi
+          
+          echo "Project data fetched successfully"
+          
+          rm -f payload.json
+
+      - name: Validate JSON
+        run: |
+          set -e
+          
+          if ! jq empty docs/data/projects.json 2>/dev/null; then
+            echo "Invalid JSON generated"
+            cat docs/data/projects.json
+            exit 1
+          fi
+          
+          echo "JSON validation passed"
 
       - name: Commit JSON
         run: |
           git add docs/data/projects.json
-          git commit -m "Update projects data" || echo "No changes"
-          git push origin main
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update projects data [automated]"
+            git push origin main
+            echo "Changes committed and pushed"
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Project Data Sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** Success" >> $GITHUB_STEP_SUMMARY
+          echo "- **File:** docs/data/projects.json" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f docs/data/projects.json ]; then
+            task_count=$(jq '.data.user.projectV2.items.nodes | length' docs/data/projects.json)
+            echo "- **Tasks fetched:** $task_count" >> $GITHUB_STEP_SUMMARY
+          fi
