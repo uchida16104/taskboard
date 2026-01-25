@@ -11,19 +11,19 @@ permissions:
 jobs:
   add-to-project:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Validate Issue
         uses: actions/github-script@v7
         with:
           script: |
             const issue = context.payload.issue;
-            
+
             if (!issue) {
               core.setFailed('Issue is missing or invalid');
               return;
             }
-            
+
             core.info(`Processing issue: #${issue.number} - ${issue.title}`);
 
       - name: Check if Already in Project
@@ -32,12 +32,12 @@ jobs:
         with:
           script: |
             const issue = context.payload.issue;
-            const labels = issue.labels.map(l => l.name);
-            
+            const labels = issue.labels.map(label => label.name);
+
             const alreadyProcessed = labels.includes('from-discussion');
-            
+
             core.setOutput('skip_add', alreadyProcessed);
-            
+
             if (alreadyProcessed) {
               core.info('Issue was created from discussion, already added to project');
             }
@@ -55,25 +55,25 @@ jobs:
         with:
           script: |
             const issue = context.payload.issue;
-            
+
+            const body =
+              '📋 This issue has been automatically added to the project board.\n\n' +
+              '**Current Status:** Backlog\n\n' +
+              '**Workflow:**\n' +
+              '```mermaid\n' +
+              'graph LR\n' +
+              '  A[Backlog] --> B[Todo]\n' +
+              '  B --> C[Doing]\n' +
+              '  C --> D[Done]\n' +
+              '  style A fill:#f9f,stroke:#333,stroke-width:2px\n' +
+              '```\n\n' +
+              'Please move this task through the workflow as progress is made.';
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issue.number,
-              body: `📋 This issue has been automatically added to the project board.
-
-**Current Status:** Backlog
-
-**Workflow:**
-\`\`\`mermaid
-graph LR
-  A[Backlog] --> B[Todo]
-  B --> C[Doing]
-  C --> D[Done]
-  style A fill:#f9f,stroke:#333,stroke-width:2px
-\`\`\`
-
-Please move this task through the workflow as progress is made.`
+              body: body
             });
 
       - name: Set Initial Status Label
@@ -82,7 +82,7 @@ Please move this task through the workflow as progress is made.`
         with:
           script: |
             const issue = context.payload.issue;
-            
+
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
