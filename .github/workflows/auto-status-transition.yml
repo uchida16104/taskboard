@@ -1,0 +1,92 @@
+name: Auto Status Transition
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: write
+
+jobs:
+  auto-transition:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine Current State
+        id: state
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            
+            if (!issue) {
+              core.info('No issue found. Skipping.');
+              return;
+            }
+
+            const labels = issue.labels.map(l => l.name);
+            
+            let state = 'unknown';
+            if (labels.includes('status:backlog')) state = 'backlog';
+            else if (labels.includes('status:todo')) state = 'todo';
+            else if (labels.includes('status:doing')) state = 'doing';
+            else if (labels.includes('status:done')) state = 'done';
+            else if (labels.includes('status:open')) state = 'open';
+            else if (labels.includes('status:closed')) state = 'closed';
+            else if (labels.includes('status:pending')) state = 'pending';
+            
+            core.setOutput('current_state', state);
+            core.setOutput('issue_number', issue.number);
+            
+            core.info(`Issue #${issue.number} current state: ${state}`);
+
+      - name: Update Issue State
+        if: steps.state.outputs.current_state != 'unknown'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ steps.state.outputs.issue_number }};
+            const state = '${{ steps.state.outputs.current_state }}';
+            
+            const stateMessages = {
+              'backlog': '📦 Status: Backlog - Task is queued and waiting to be started',
+              'todo': '📝 Status: Todo - Task is ready to be worked on',
+              'doing': '⚙️ Status: Doing - Task is currently in progress',
+              'done': '✅ Status: Done - Task has been completed',
+              'open': '🟢 Status: Open - Issue is active',
+              'closed': '🔴 Status: Closed - Issue is closed',
+              'pending': '🟡 Status: Pending - Awaiting review'
+            };
+            
+            const message = stateMessages[state] || 'Status updated';
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `${message}\n\n**Workflow:** Backlog → Todo → Doing → Done`
+            });
+            
+            core.info(`Status comment added to issue #${issueNumber}`);
+
+      - name: Close Issue if Done
+        if: steps.state.outputs.current_state == 'done'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ steps.state.outputs.issue_number }};
+            
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              state: 'closed',
+              state_reason: 'completed'
+            });
+            
+            core.info(`Issue #${issueNumber} closed as completed`);
