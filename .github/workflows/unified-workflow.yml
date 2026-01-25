@@ -1,0 +1,256 @@
+name: Unified TaskBoard Workflow
+
+on:
+  discussion:
+    types: [labeled]
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+
+permissions:
+  discussions: write
+  issues: write
+  contents: write
+
+jobs:
+  process-discussion-or-issue:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Determine Item Type and Label
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const isDiscussion = Boolean(context.payload.discussion);
+            const isIssue = Boolean(context.payload.issue);
+            const label = context.payload.label?.name || '';
+            const item = context.payload.discussion || context.payload.issue;
+
+            core.setOutput('is_discussion', String(isDiscussion));
+            core.setOutput('is_issue', String(isIssue));
+            core.setOutput('label', label);
+            core.setOutput('item_number', item?.number ?? 0);
+
+      - name: Process APPROVED Label
+        if: steps.check.outputs.label == 'approved' && steps.check.outputs.is_discussion == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const discussion = context.payload.discussion;
+
+            try {
+              const issues = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'all',
+                labels: 'from-discussion',
+                per_page: 100
+              });
+
+              const exists = issues.data.find(i =>
+                i.body && i.body.includes(discussion.html_url)
+              );
+
+              if (exists) {
+                try {
+                  await github.graphql(
+                    `mutation ($id: ID!, $body: String!) {
+                      addDiscussionComment(input: {
+                        discussionId: $id,
+                        body: $body
+                      }) {
+                        comment { id }
+                      }
+                    }`,
+                    {
+                      id: discussion.node_id,
+                      body: `Already converted to issue #${exists.number}`
+                    }
+                  );
+                } catch (e) {
+                  console.error('Failed to post "already converted" comment (GraphQL):', e);
+                }
+                return;
+              }
+
+              const issueBody = [
+                '## Original Discussion',
+                discussion.html_url,
+                '',
+                '----',
+                '',
+                '## Content (Automatically Transcribed)',
+                discussion.body || '_No content provided_',
+                '',
+                '----',
+                '',
+                '## Related Wiki',
+                `https://github.com/${context.repo.owner}/${context.repo.repo}/wiki/Design-Notes`,
+                '',
+                '----',
+                '',
+                '**Status:** Open (Created from approved discussion)',
+                '**Next Step:** Backlog → Todo → Doing → Done'
+              ].join('\n');
+
+              const newIssue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: discussion.title,
+                body: issueBody,
+                labels: ['from-discussion', 'status:open']
+              });
+
+              try {
+                await github.graphql(
+                  `mutation ($id: ID!, $body: String!) {
+                    addDiscussionComment(input: {
+                      discussionId: $id,
+                      body: $body
+                    }) {
+                      comment { id }
+                    }
+                  }`,
+                  {
+                    id: discussion.node_id,
+                    body: `Approved and converted to issue #${newIssue.data.number}`
+                  }
+                );
+              } catch (e) {
+                console.error('Failed to post "converted" comment (GraphQL):', e);
+              }
+
+              try {
+                await github.request('POST /repos/{owner}/{repo}/discussions/{discussion_number}/labels', {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  discussion_number: discussion.number,
+                  labels: ['converted-to-issue']
+                });
+              } catch (e) {
+                console.error('Failed to add labels to discussion via REST request:', e);
+              }
+
+            } catch (err) {
+              console.error('Process APPROVED Label failed:', err);
+              throw err;
+            }
+
+      - name: Process REJECTED Label
+        if: steps.check.outputs.label == 'rejected' && steps.check.outputs.is_discussion == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const discussion = context.payload.discussion;
+            try {
+              try {
+                await github.graphql(
+                  `mutation ($id: ID!, $body: String!) {
+                    addDiscussionComment(input: {
+                      discussionId: $id,
+                      body: $body
+                    }) {
+                      comment { id }
+                    }
+                  }`,
+                  {
+                    id: discussion.node_id,
+                    body: 'This discussion has been rejected and will be closed.'
+                  }
+                );
+              } catch (e) {
+                console.error('Failed to post rejection comment (GraphQL):', e);
+              }
+
+              try {
+                await github.graphql(
+                  `mutation ($id: ID!) {
+                    closeDiscussion(input: { discussionId: $id }) {
+                      discussion { id closed }
+                    }
+                  }`,
+                  { id: discussion.node_id }
+                );
+              } catch (e) {
+                console.error('Failed to close discussion (GraphQL):', e);
+              }
+
+              try {
+                await github.request('POST /repos/{owner}/{repo}/discussions/{discussion_number}/labels', {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  discussion_number: discussion.number,
+                  labels: ['rejected-closed']
+                });
+              } catch (e) {
+                console.error('Failed to add "rejected-closed" label via REST request:', e);
+              }
+            } catch (err) {
+              console.error('Process REJECTED Label failed:', err);
+              throw err;
+            }
+
+      - name: Process NEEDS-REVIEW Label
+        if: steps.check.outputs.label == 'needs-review' && steps.check.outputs.is_discussion == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const discussion = context.payload.discussion;
+            try {
+              try {
+                await github.graphql(
+                  `mutation ($id: ID!, $body: String!) {
+                    addDiscussionComment(input: {
+                      discussionId: $id,
+                      body: $body
+                    }) {
+                      comment { id }
+                    }
+                  }`,
+                  {
+                    id: discussion.node_id,
+                    body: 'This discussion is pending review.'
+                  }
+                );
+              } catch (e) {
+                console.error('Failed to post "pending review" comment (GraphQL):', e);
+              }
+
+              try {
+                await github.request('POST /repos/{owner}/{repo}/discussions/{discussion_number}/labels', {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  discussion_number: discussion.number,
+                  labels: ['pending-review']
+                });
+              } catch (e) {
+                console.error('Failed to add "pending-review" label via REST request:', e);
+              }
+            } catch (err) {
+              console.error('Process NEEDS-REVIEW Label failed:', err);
+              throw err;
+            }
+
+      - name: Add Issue to Project Board
+        if: steps.check.outputs.label == 'approved' && steps.check.outputs.is_discussion == 'true'
+        uses: actions/add-to-project@v0.5.0
+        continue-on-error: true
+        with:
+          project-url: https://github.com/users/Uchida16104/projects/5
+          github-token: ${{ secrets.GH_PAT }}
+
+      - name: Workflow Summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const summary =
+              '# Workflow Execution Summary\n\n' +
+              `- Item Type: ${'${{ steps.check.outputs.is_discussion }}' === 'true' ? 'Discussion' : 'Issue'}\n` +
+              `- Item Number: #${'${{ steps.check.outputs.item_number }}'}\n` +
+              `- Label Applied: ${'${{ steps.check.outputs.label }}'}\n`;
+
+            core.summary.addRaw(summary).write();
