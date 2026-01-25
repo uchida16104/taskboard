@@ -1,0 +1,102 @@
+name: Normal Workflow
+
+on:
+  issues:
+    types: [opened, labeled, unlabeled]
+  discussion:
+    types: [labeled]
+
+permissions:
+  issues: write
+  discussions: write
+  contents: write
+
+jobs:
+  workflow-transition:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Process State Transition
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const context = require('@actions/github').context;
+            const item = context.payload.issue || context.payload.discussion;
+            
+            if (!item) {
+              core.setFailed('No issue or discussion found');
+              return;
+            }
+
+            const states = [
+          {
+                    "id": "A",
+                    "name": "Idea"
+          },
+          {
+                    "id": "D",
+                    "name": "Open TaskIssue"
+          },
+          {
+                    "id": "E",
+                    "name": "Close Discussion"
+          },
+          {
+                    "id": "F",
+                    "name": "Pending"
+          },
+          {
+                    "id": "D",
+                    "name": "Open TaskIssue"
+          },
+          {
+                    "id": "E",
+                    "name": "Close Discussion"
+          },
+          {
+                    "id": "G",
+                    "name": "Add to Project Board"
+          },
+          {
+                    "id": "H",
+                    "name": "Backlog"
+          },
+          {
+                    "id": "I",
+                    "name": "Todo"
+          },
+          {
+                    "id": "J",
+                    "name": "Doing"
+          },
+          {
+                    "id": "K",
+                    "name": "Done"
+          },
+          {
+                    "id": "L",
+                    "name": "Close Discussion"
+          }
+];
+            
+            const currentLabels = item.labels.map(l => l.name);
+            const currentState = this.determineCurrentState(currentLabels);
+            
+            core.info(`Current state: ${currentState}`);
+            
+            // Auto transition logic based on Mermaid flow
+            const nextState = this.getNextState(currentState, states);
+            
+            if (nextState && this.autoMode) {
+              await this.transitionToState(github, context, item.number, nextState);
+            }
+
+      - name: Update Project Board
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Project board update logic
+            core.info('Project board updated');
