@@ -1,0 +1,222 @@
+name: Unified TaskBoard Workflow
+
+on:
+  discussion:
+    types: [labeled]
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+
+permissions:
+  discussions: write
+  issues: write
+  contents: write
+
+jobs:
+  process-discussion-or-issue:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Determine Item Type and Label
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const isDiscussion = !!context.payload.discussion;
+            const isIssue = !!context.payload.issue;
+            const label = context.payload.label?.name || '';
+            
+            core.setOutput('is_discussion', isDiscussion);
+            core.setOutput('is_issue', isIssue);
+            core.setOutput('label', label);
+            core.setOutput('item_number', (context.payload.discussion || context.payload.issue)?.number || 0);
+            
+            core.info(`Type: ${isDiscussion ? 'Discussion' : 'Issue'}, Label: ${label}`);
+
+      - name: Process APPROVED Label
+        if: steps.check.outputs.label == 'approved' && steps.check.outputs.is_discussion == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const discussion = context.payload.discussion;
+            
+            const existingIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all',
+              labels: 'from-discussion',
+              per_page: 100
+            });
+            
+            const alreadyCreated = existingIssues.data.find(issue => 
+              issue.body && issue.body.includes(discussion.html_url)
+            );
+            
+            if (alreadyCreated) {
+              core.info(`Issue already exists: #${alreadyCreated.number}. Skipping creation.`);
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: discussion.number,
+                body: `✅ This discussion was already converted to issue #${alreadyCreated.number}`
+              });
+              
+              return;
+            }
+            
+            const issueBody = `## Original Discussion
+${discussion.html_url}
+
+---
+
+## Content (Automatically Transcribed)
+${discussion.body || '_No content provided_'}
+
+---
+
+## Related Wiki
+https://github.com/${context.repo.owner}/${context.repo.repo}/wiki/Design-Notes
+
+---
+
+**Status:** Open (Created from approved discussion)
+**Next Step:** Move to project board (Backlog → Todo → Doing → Done)`;
+
+            const newIssue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: discussion.title,
+              body: issueBody,
+              labels: ['from-discussion', 'status:open']
+            });
+            
+            core.info(`✅ Issue #${newIssue.data.number} created successfully`);
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: discussion.number,
+              body: `✅ This discussion has been approved and converted to issue #${newIssue.data.number}
+
+**Status:** Open
+
+**Next steps:**
+1. The issue will be automatically added to the project board
+2. Move it through: Backlog → Todo → Doing → Done`
+            });
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: discussion.number,
+              labels: ['converted-to-issue']
+            });
+
+      - name: Process REJECTED Label
+        if: steps.check.outputs.label == 'rejected' && steps.check.outputs.is_discussion == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const discussion = context.payload.discussion;
+            const discussionId = discussion.node_id;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: discussion.number,
+              body: `❌ This discussion has been rejected and will be closed.
+
+**Status:** Closed
+
+**Reason:** Does not align with project goals or current priorities.
+
+If you believe this was done in error, please contact the maintainers.`
+            });
+            
+            await github.graphql(`
+              mutation CloseDiscussion($id: ID!) {
+                closeDiscussion(input: { discussionId: $id }) {
+                  discussion {
+                    id
+                    closed
+                  }
+                }
+              }
+            `, { id: discussionId });
+            
+            core.info('✅ Discussion closed successfully');
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: discussion.number,
+              labels: ['rejected-closed']
+            });
+
+      - name: Process NEEDS-REVIEW Label
+        if: steps.check.outputs.label == 'needs-review' && steps.check.outputs.is_discussion == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const discussion = context.payload.discussion;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: discussion.number,
+              body: `🤔 This discussion needs review and is now pending.
+
+**Status:** Pending
+
+**Next steps:**
+- A maintainer will review this discussion
+- You may be asked for more information
+- The discussion will be approved or rejected after review`
+            });
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: discussion.number,
+              labels: ['pending-review']
+            });
+            
+            core.info('✅ Discussion marked as pending');
+
+      - name: Add Issue to Project Board
+        if: steps.check.outputs.label == 'approved' && steps.check.outputs.is_discussion == 'true'
+        uses: actions/add-to-project@v0.5.0
+        continue-on-error: true
+        with:
+          project-url: https://github.com/users/Uchida16104/projects/5
+          github-token: ${{ secrets.GH_PAT }}
+
+      - name: Workflow Summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = '${{ steps.check.outputs.label }}';
+            const itemNum = '${{ steps.check.outputs.item_number }}';
+            const isDiscussion = '${{ steps.check.outputs.is_discussion }}' === 'true';
+            
+            let summary = '# Workflow Execution Summary\n\n';
+            summary += `- **Item Type:** ${isDiscussion ? 'Discussion' : 'Issue'}\n`;
+            summary += `- **Item Number:** #${itemNum}\n`;
+            summary += `- **Label Applied:** ${label}\n`;
+            summary += `- **Action Taken:** `;
+            
+            if (label === 'approved') {
+              summary += 'Issue created and added to project board (Status: Open)\n';
+            } else if (label === 'rejected') {
+              summary += 'Discussion closed (Status: Closed)\n';
+            } else if (label === 'needs-review') {
+              summary += 'Marked as pending review (Status: Pending)\n';
+            } else {
+              summary += 'No action (invalid label)\n';
+            }
+            
+            core.summary.addRaw(summary).write();
