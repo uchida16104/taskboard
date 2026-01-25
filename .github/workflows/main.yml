@@ -1,63 +1,91 @@
-name: Add issue to project
+name: Add Issue to Project
 
 on:
   issues:
     types: [opened]
 
+permissions:
+  issues: write
+  contents: read
+
 jobs:
-  add:
+  add-to-project:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Validate issue
+      - name: Validate Issue
         uses: actions/github-script@v7
         with:
           script: |
             const issue = context.payload.issue;
-            
+
             if (!issue) {
               core.setFailed('Issue is missing or invalid');
               return;
             }
-            
+
             core.info(`Processing issue: #${issue.number} - ${issue.title}`);
 
-      - name: Add to project
+      - name: Check if Already in Project
+        id: check-project
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const labels = issue.labels.map(label => label.name);
+
+            const alreadyProcessed = labels.includes('from-discussion');
+
+            core.setOutput('skip_add', alreadyProcessed);
+
+            if (alreadyProcessed) {
+              core.info('Issue was created from discussion, already added to project');
+            }
+
+      - name: Add to Project Board
+        if: steps.check-project.outputs.skip_add != 'true'
         uses: actions/add-to-project@v0.5.0
         with:
           project-url: https://github.com/users/Uchida16104/projects/5
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GH_PAT }}
 
-      - name: Confirm project addition
+      - name: Add Confirmation Comment
+        if: steps.check-project.outputs.skip_add != 'true'
         uses: actions/github-script@v7
         with:
           script: |
             const issue = context.payload.issue;
-            
-            try {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issue.number,
-                body: '📋 This issue has been automatically added to the project board.\n\n**Current Status:** Backlog\n\n**Workflow:**\n```mermaid\ngraph LR\n  A[Backlog] --> B[Todo]\n  B --> C[Doing]\n  C --> D[Done]\n  style A fill:#f9f,stroke:#333,stroke-width:2px\n```\n\nPlease move this task through the workflow as progress is made.'
-              });
-            } catch (error) {
-              core.warning(`Could not add comment to issue: ${error.message}`);
-            }
 
-      - name: Set initial status label
+            const body =
+              '📋 This issue has been automatically added to the project board.\n\n' +
+              '**Current Status:** Backlog\n\n' +
+              '**Workflow:**\n' +
+              '```mermaid\n' +
+              'graph LR\n' +
+              '  A[Backlog] --> B[Todo]\n' +
+              '  B --> C[Doing]\n' +
+              '  C --> D[Done]\n' +
+              '  style A fill:#f9f,stroke:#333,stroke-width:2px\n' +
+              '```\n\n' +
+              'Please move this task through the workflow as progress is made.';
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: body
+            });
+
+      - name: Set Initial Status Label
+        if: steps.check-project.outputs.skip_add != 'true'
         uses: actions/github-script@v7
         with:
           script: |
             const issue = context.payload.issue;
-            
-            try {
-              await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issue.number,
-                labels: ['status:backlog']
-              });
-            } catch (error) {
-              core.warning(`Could not add status label: ${error.message}`);
-            }
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: ['status:backlog']
+            });
