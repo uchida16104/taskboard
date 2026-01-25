@@ -55,12 +55,20 @@ jobs:
             );
 
             if (exists) {
-              await github.rest.discussions.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                discussion_number: discussion.number,
-                body: `Already converted to issue #${exists.number}`
-              });
+              await github.graphql(
+                `mutation ($id: ID!, $body: String!) {
+                  addDiscussionComment(input: {
+                    discussionId: $id,
+                    body: $body
+                  }) {
+                    comment { id }
+                  }
+                }`,
+                {
+                  id: discussion.node_id,
+                  body: `Already converted to issue #${exists.number}`
+                }
+              );
               return;
             }
 
@@ -92,12 +100,20 @@ jobs:
               labels: ['from-discussion', 'status:open']
             });
 
-            await github.rest.discussions.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              discussion_number: discussion.number,
-              body: `Approved and converted to issue #${newIssue.data.number}`
-            });
+            await github.graphql(
+              `mutation ($id: ID!, $body: String!) {
+                addDiscussionComment(input: {
+                  discussionId: $id,
+                  body: $body
+                }) {
+                  comment { id }
+                }
+              }`,
+              {
+                id: discussion.node_id,
+                body: `Approved and converted to issue #${newIssue.data.number}`
+              }
+            );
 
             await github.rest.discussions.addLabelsToDiscussion({
               owner: context.repo.owner,
@@ -113,15 +129,27 @@ jobs:
           script: |
             const discussion = context.payload.discussion;
 
-            await github.rest.discussions.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              discussion_number: discussion.number,
-              body: 'This discussion has been rejected and will be closed.'
-            });
+            await github.graphql(
+              `mutation ($id: ID!, $body: String!) {
+                addDiscussionComment(input: {
+                  discussionId: $id,
+                  body: $body
+                }) {
+                  comment { id }
+                }
+              }`,
+              {
+                id: discussion.node_id,
+                body: 'This discussion has been rejected and will be closed.'
+              }
+            );
 
             await github.graphql(
-              'mutation ($id: ID!) { closeDiscussion(input: { discussionId: $id }) { discussion { id closed } } }',
+              `mutation ($id: ID!) {
+                closeDiscussion(input: { discussionId: $id }) {
+                  discussion { id closed }
+                }
+              }`,
               { id: discussion.node_id }
             );
 
@@ -139,12 +167,20 @@ jobs:
           script: |
             const discussion = context.payload.discussion;
 
-            await github.rest.discussions.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              discussion_number: discussion.number,
-              body: 'This discussion is pending review.'
-            });
+            await github.graphql(
+              `mutation ($id: ID!, $body: String!) {
+                addDiscussionComment(input: {
+                  discussionId: $id,
+                  body: $body
+                }) {
+                  comment { id }
+                }
+              }`,
+              {
+                id: discussion.node_id,
+                body: 'This discussion is pending review.'
+              }
+            );
 
             await github.rest.discussions.addLabelsToDiscussion({
               owner: context.repo.owner,
