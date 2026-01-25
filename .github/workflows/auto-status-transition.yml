@@ -2,16 +2,12 @@ name: Auto Status Transition
 
 on:
   issues:
-    types: [opened, labeled, unlabeled, edited]
-  discussion:
-    types: [labeled, created]
+    types: [labeled]
   workflow_dispatch:
 
 permissions:
   issues: write
-  discussions: write
   contents: write
-  pull-requests: write
 
 jobs:
   auto-transition:
@@ -26,143 +22,71 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const item = context.payload.issue || context.payload.discussion;
+            const issue = context.payload.issue;
             
-            if (!item) {
-              core.setFailed('No item found');
+            if (!issue) {
+              core.info('No issue found. Skipping.');
               return;
             }
 
-            const labels = (item.labels || []).map(l => typeof l === 'string' ? l : l.name);
+            const labels = issue.labels.map(l => l.name);
             
             let state = 'unknown';
-            if (labels.includes('approved')) state = 'open';
-            else if (labels.includes('rejected')) state = 'closed';
-            else if (labels.includes('needs-review')) state = 'pending';
+            if (labels.includes('status:backlog')) state = 'backlog';
+            else if (labels.includes('status:todo')) state = 'todo';
+            else if (labels.includes('status:doing')) state = 'doing';
+            else if (labels.includes('status:done')) state = 'done';
+            else if (labels.includes('status:open')) state = 'open';
+            else if (labels.includes('status:closed')) state = 'closed';
+            else if (labels.includes('status:pending')) state = 'pending';
             
             core.setOutput('current_state', state);
-            core.setOutput('item_number', item.number);
-            core.setOutput('item_type', context.payload.issue ? 'issue' : 'discussion');
+            core.setOutput('issue_number', issue.number);
             
-            core.info(`Current state: ${state}`);
+            core.info(`Issue #${issue.number} current state: ${state}`);
 
-      - name: Transition to Open (Approved)
-        if: steps.state.outputs.current_state == 'open'
+      - name: Update Issue State
+        if: steps.state.outputs.current_state != 'unknown'
         uses: actions/github-script@v7
         with:
           script: |
-            const itemNumber = ${{ steps.state.outputs.item_number }};
-            const itemType = '${{ steps.state.outputs.item_type }}';
-            
-            if (itemType === 'discussion') {
-              const issue = await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: context.payload.discussion.title,
-                body: `## Original Discussion\n${context.payload.discussion.html_url}\n\n---\n\n${context.payload.discussion.body}`,
-                labels: ['from-discussion', 'status:open']
-              });
-              
-              core.info(`Issue created: #${issue.data.number}`);
-              
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.discussion.number,
-                body: `✅ Approved! Issue #${issue.data.number} created and added to project board with status: **Open**`
-              });
-            } else {
-              await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: itemNumber,
-                state: 'open'
-              });
-              
-              await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: itemNumber,
-                labels: ['status:open']
-              });
-            }
-
-      - name: Transition to Closed (Rejected)
-        if: steps.state.outputs.current_state == 'closed'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const itemNumber = ${{ steps.state.outputs.item_number }};
-            const itemType = '${{ steps.state.outputs.item_type }}';
-            
-            if (itemType === 'discussion') {
-              const discussionId = context.payload.discussion.node_id;
-              
-              await github.graphql(`
-                mutation CloseDiscussion($id: ID!) {
-                  closeDiscussion(input: { discussionId: $id }) {
-                    discussion {
-                      id
-                      closed
-                    }
-                  }
-                }
-              `, { id: discussionId });
-              
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: itemNumber,
-                body: '❌ Rejected. Discussion closed with status: **Closed**'
-              });
-            } else {
-              await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: itemNumber,
-                state: 'closed',
-                state_reason: 'not_planned'
-              });
-              
-              await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: itemNumber,
-                labels: ['status:closed']
-              });
-            }
-
-      - name: Transition to Pending (Needs Review)
-        if: steps.state.outputs.current_state == 'pending'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const itemNumber = ${{ steps.state.outputs.item_number }};
-            const itemType = '${{ steps.state.outputs.item_type }}';
-            
-            if (itemType === 'discussion') {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: itemNumber,
-                body: '🤔 Needs review. Status: **Pending**'
-              });
-            } else {
-              await github.rest.issues.addLabels({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: itemNumber,
-                labels: ['status:pending']
-              });
-            }
-
-      - name: Update Project Board
-        uses: actions/github-script@v7
-        continue-on-error: true
-        with:
-          github-token: ${{ secrets.GH_PAT }}
-          script: |
+            const issueNumber = ${{ steps.state.outputs.issue_number }};
             const state = '${{ steps.state.outputs.current_state }}';
-            const itemNumber = ${{ steps.state.outputs.item_number }};
             
-            core.info(`Updating project board for item #${itemNumber} with state: ${state}`);
+            const stateMessages = {
+              'backlog': '📦 Status: Backlog - Task is queued and waiting to be started',
+              'todo': '📝 Status: Todo - Task is ready to be worked on',
+              'doing': '⚙️ Status: Doing - Task is currently in progress',
+              'done': '✅ Status: Done - Task has been completed',
+              'open': '🟢 Status: Open - Issue is active',
+              'closed': '🔴 Status: Closed - Issue is closed',
+              'pending': '🟡 Status: Pending - Awaiting review'
+            };
+            
+            const message = stateMessages[state] || 'Status updated';
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `${message}\n\n**Workflow:** Backlog → Todo → Doing → Done`
+            });
+            
+            core.info(`Status comment added to issue #${issueNumber}`);
+
+      - name: Close Issue if Done
+        if: steps.state.outputs.current_state == 'done'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ steps.state.outputs.issue_number }};
+            
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              state: 'closed',
+              state_reason: 'completed'
+            });
+            
+            core.info(`Issue #${issueNumber} closed as completed`);
