@@ -1,7 +1,7 @@
 name: Unified TaskBoard Workflow
 
 on:
-  discussions:
+  discussion:
     types: [labeled]
   issues:
     types: [labeled]
