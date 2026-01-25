@@ -1,7 +1,7 @@
 name: Unified TaskBoard Workflow
 
 on:
-  discussion:
+  discussions:
     types: [labeled]
   issues:
     types: [labeled]
@@ -25,15 +25,16 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const isDiscussion = !!context.payload.discussion;
-            const isIssue = !!context.payload.issue;
+            const isDiscussion = Boolean(context.payload.discussion);
+            const isIssue = Boolean(context.payload.issue);
             const label = context.payload.label?.name || '';
-            
-            core.setOutput('is_discussion', isDiscussion);
-            core.setOutput('is_issue', isIssue);
+            const item = context.payload.discussion || context.payload.issue;
+
+            core.setOutput('is_discussion', String(isDiscussion));
+            core.setOutput('is_issue', String(isIssue));
             core.setOutput('label', label);
-            core.setOutput('item_number', (context.payload.discussion || context.payload.issue)?.number || 0);
-            
+            core.setOutput('item_number', item?.number ?? 0);
+
             core.info(`Type: ${isDiscussion ? 'Discussion' : 'Issue'}, Label: ${label}`);
 
       - name: Process APPROVED Label
@@ -42,7 +43,7 @@ jobs:
         with:
           script: |
             const discussion = context.payload.discussion;
-            
+
             const existingIssues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -50,41 +51,43 @@ jobs:
               labels: 'from-discussion',
               per_page: 100
             });
-            
-            const alreadyCreated = existingIssues.data.find(issue => 
+
+            const alreadyCreated = existingIssues.data.find(issue =>
               issue.body && issue.body.includes(discussion.html_url)
             );
-            
+
             if (alreadyCreated) {
-              core.info(`Issue already exists: #${alreadyCreated.number}. Skipping creation.`);
-              
+              core.info(`Issue already exists: #${alreadyCreated.number}`);
+
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: discussion.number,
-                body: `✅ This discussion was already converted to issue #${alreadyCreated.number}`
+                body: `This discussion was already converted to issue #${alreadyCreated.number}`
               });
-              
+
               return;
             }
-            
-            const issueBody = `## Original Discussion
+
+            const issueBody = `
+## Original Discussion
 ${discussion.html_url}
 
----
+----
 
 ## Content (Automatically Transcribed)
 ${discussion.body || '_No content provided_'}
 
----
+----
 
 ## Related Wiki
 https://github.com/${context.repo.owner}/${context.repo.repo}/wiki/Design-Notes
 
----
+----
 
-**Status:** Open (Created from approved discussion)
-**Next Step:** Move to project board (Backlog → Todo → Doing → Done)`;
+**Status:** Open (Created from approved discussion)  
+**Next Step:** Backlog → Todo → Doing → Done
+`.trim();
 
             const newIssue = await github.rest.issues.create({
               owner: context.repo.owner,
@@ -93,22 +96,14 @@ https://github.com/${context.repo.owner}/${context.repo.repo}/wiki/Design-Notes
               body: issueBody,
               labels: ['from-discussion', 'status:open']
             });
-            
-            core.info(`✅ Issue #${newIssue.data.number} created successfully`);
-            
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: discussion.number,
-              body: `✅ This discussion has been approved and converted to issue #${newIssue.data.number}
-
-**Status:** Open
-
-**Next steps:**
-1. The issue will be automatically added to the project board
-2. Move it through: Backlog → Todo → Doing → Done`
+              body: `Approved and converted to issue #${newIssue.data.number}`
             });
-            
+
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -122,34 +117,23 @@ https://github.com/${context.repo.owner}/${context.repo.repo}/wiki/Design-Notes
         with:
           script: |
             const discussion = context.payload.discussion;
-            const discussionId = discussion.node_id;
-            
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: discussion.number,
-              body: `❌ This discussion has been rejected and will be closed.
-
-**Status:** Closed
-
-**Reason:** Does not align with project goals or current priorities.
-
-If you believe this was done in error, please contact the maintainers.`
+              body: `This discussion has been rejected and will be closed.`
             });
-            
-            await github.graphql(`
-              mutation CloseDiscussion($id: ID!) {
+
+            await github.graphql(
+              `mutation ($id: ID!) {
                 closeDiscussion(input: { discussionId: $id }) {
-                  discussion {
-                    id
-                    closed
-                  }
+                  discussion { id closed }
                 }
-              }
-            `, { id: discussionId });
-            
-            core.info('✅ Discussion closed successfully');
-            
+              }`,
+              { id: discussion.node_id }
+            );
+
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -163,29 +147,20 @@ If you believe this was done in error, please contact the maintainers.`
         with:
           script: |
             const discussion = context.payload.discussion;
-            
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: discussion.number,
-              body: `🤔 This discussion needs review and is now pending.
-
-**Status:** Pending
-
-**Next steps:**
-- A maintainer will review this discussion
-- You may be asked for more information
-- The discussion will be approved or rejected after review`
+              body: `This discussion is pending review.`
             });
-            
+
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: discussion.number,
               labels: ['pending-review']
             });
-            
-            core.info('✅ Discussion marked as pending');
 
       - name: Add Issue to Project Board
         if: steps.check.outputs.label == 'approved' && steps.check.outputs.is_discussion == 'true'
@@ -202,21 +177,12 @@ If you believe this was done in error, please contact the maintainers.`
             const label = '${{ steps.check.outputs.label }}';
             const itemNum = '${{ steps.check.outputs.item_number }}';
             const isDiscussion = '${{ steps.check.outputs.is_discussion }}' === 'true';
-            
-            let summary = '# Workflow Execution Summary\n\n';
-            summary += `- **Item Type:** ${isDiscussion ? 'Discussion' : 'Issue'}\n`;
-            summary += `- **Item Number:** #${itemNum}\n`;
-            summary += `- **Label Applied:** ${label}\n`;
-            summary += `- **Action Taken:** `;
-            
-            if (label === 'approved') {
-              summary += 'Issue created and added to project board (Status: Open)\n';
-            } else if (label === 'rejected') {
-              summary += 'Discussion closed (Status: Closed)\n';
-            } else if (label === 'needs-review') {
-              summary += 'Marked as pending review (Status: Pending)\n';
-            } else {
-              summary += 'No action (invalid label)\n';
-            }
-            
+
+            let summary = `# Workflow Execution Summary
+
+- Item Type: ${isDiscussion ? 'Discussion' : 'Issue'}
+- Item Number: #${itemNum}
+- Label Applied: ${label}
+`;
+
             core.summary.addRaw(summary).write();
