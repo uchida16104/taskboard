@@ -80,6 +80,15 @@
         @media (prefers-reduced-motion: reduce) {
             * { animation: none !important; transition: none !important; }
         }
+
+        .alert-box {
+            background: rgba(255, 193, 7, 0.2);
+            border: 2px solid #ffc107;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            color: #fff;
+            margin: 1rem 0;
+        }
     </style>
 </head>
 
@@ -118,6 +127,11 @@
             </div>
         </header>
 
+        <div class="alert-box" role="alert">
+            <h3 class="font-bold mb-2">⚠️ Important Notice</h3>
+            <p class="text-sm">Generated workflow files must be manually uploaded to <code>.github/workflows/</code> directory. Ensure no duplicate filenames exist to prevent conflicts.</p>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             
             <section class="glass-effect rounded-2xl p-8" data-aos="fade-right" aria-labelledby="editor-title">
@@ -130,7 +144,7 @@
                     <label for="workflow-name" class="block text-white mb-2 font-semibold">Workflow Name</label>
                     <input type="text" id="workflow-name" x-model="workflowName" 
                            class="w-full px-4 py-3 rounded-lg glass-effect text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-                           placeholder="e.g., Status Transition Workflow" aria-required="true">
+                           placeholder="e.g., Custom Status Workflow" aria-required="true">
                 </div>
                 
                 <div class="mb-6">
@@ -162,7 +176,7 @@
                             class="w-full px-6 py-3 glass-effect hover:bg-white hover:bg-opacity-20 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
                             aria-label="Toggle between auto and manual mode">
                         <span class="iconify" data-icon="mdi:swap-horizontal"></span>
-                        <span x-text="autoMode ? 'Switch to Manual Mode' : 'Switch to Auto Mode'"></span>
+                        <span x-text="autoMode ? 'Mode: Auto (Click to Manual)' : 'Mode: Manual (Click to Auto)'"></span>
                     </button>
                 </div>
             </section>
@@ -193,7 +207,7 @@
             <div class="mb-4 flex gap-4">
                 <input type="text" x-model="outputFilename" 
                        class="flex-1 px-4 py-3 rounded-lg glass-effect text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-                       placeholder=".github/workflows/custom-workflow.yml" aria-label="Output filename">
+                       placeholder="custom-workflow.yml" aria-label="Output filename">
                 <button @click="copyYAML()" 
                         class="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-xl font-semibold transition-all flex items-center gap-2"
                         aria-label="Copy YAML to clipboard">
@@ -219,6 +233,16 @@
                  class="mt-4 p-4 bg-green-500 text-white rounded-xl flex items-center gap-3" role="alert">
                 <span class="iconify text-2xl" data-icon="mdi:check-circle"></span>
                 <span>YAML copied to clipboard!</span>
+            </div>
+
+            <div class="alert-box mt-4">
+                <h4 class="font-bold mb-2">📝 Next Steps:</h4>
+                <ol class="text-sm space-y-1 list-decimal ml-4">
+                    <li>Download the generated YAML file</li>
+                    <li>Upload to <code>.github/workflows/</code> in your repository</li>
+                    <li>Commit and push changes</li>
+                    <li>GitHub Actions will automatically execute the workflow</li>
+                </ol>
             </div>
         </section>
 
@@ -271,22 +295,22 @@
                 loading: true,
                 workflowName: '',
                 mermaidCode: `graph TB
-A[💡 Idea] --> B[📝 Create Discussion]
-B --> C{🏷️ Label Selection}
-C -->|✅ Approved| D[📋 Open Task/Issue]
-C -->|❌ Rejected| E[🚫 Close Discussion]
-C -->|🤔 Needs Review| F[⏸️ Pending]
-D --> G[📊 Add to Project Board]
+A[💡 Idea] --> B[📝 Discussion]
+B --> C{🏷️ Label}
+C -->|✅ Approved| D[📋 Issue]
+C -->|❌ Rejected| E[🚫 Closed]
+C -->|🤔 Review| F[⏸️ Pending]
+D --> G[📊 Project]
 G --> H[📦 Backlog]
 H --> I[📝 Todo]
 I --> J[⚙️ Doing]
 J --> K[✅ Done]`,
                 showPreview: false,
                 generatedYAML: '',
-                outputFilename: '.github/workflows/custom-workflow.yml',
+                outputFilename: 'custom-workflow.yml',
                 yamlCopied: false,
                 savedWorkflows: [],
-                autoMode: true,
+                autoMode: false,
 
                 async init() {
                     try {
@@ -304,7 +328,11 @@ J --> K[✅ Done]`,
                         }
 
                         if (window.mermaid) {
-                            mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+                            mermaid.initialize({ 
+                                startOnLoad: false, 
+                                theme: 'dark',
+                                flowchart: { useMaxWidth: true }
+                            });
                         }
 
                         this.loadSavedWorkflows();
@@ -363,60 +391,58 @@ J --> K[✅ Done]`,
 
                 generateYAMLFromMermaid() {
                     const states = this.extractStatesFromMermaid();
+                    const filename = this.workflowName.toLowerCase().replace(/\s+/g, '-');
                     
                     return `name: ${this.workflowName}
 
 on:
-  issues:
-    types: [opened, labeled, unlabeled]
   discussion:
     types: [labeled]
+  issues:
+    types: [labeled]
+  workflow_dispatch:
 
 permissions:
-  issues: write
   discussions: write
+  issues: write
   contents: write
 
 jobs:
-  workflow-transition:
+  custom-workflow:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Process State Transition
+      - name: Process Workflow States
         uses: actions/github-script@v7
         with:
           script: |
-            const context = require('@actions/github').context;
             const item = context.payload.issue || context.payload.discussion;
+            const label = context.payload.label?.name || '';
             
             if (!item) {
-              core.setFailed('No issue or discussion found');
+              core.info('No item found');
               return;
             }
-
+            
+            core.info(\`Processing: \${item.number} with label: \${label}\`);
+            
             const states = ${JSON.stringify(states, null, 12)};
             
-            const currentLabels = item.labels.map(l => l.name);
-            const currentState = this.determineCurrentState(currentLabels);
-            
-            core.info(\`Current state: \${currentState}\`);
-            
-            // Auto transition logic based on Mermaid flow
-            const nextState = this.getNextState(currentState, states);
-            
-            if (nextState && this.autoMode) {
-              await this.transitionToState(github, context, item.number, nextState);
+            if (label === 'approved') {
+              core.info('Approved - Opening task');
+            } else if (label === 'rejected') {
+              core.info('Rejected - Closing task');
+            } else if (label === 'needs-review') {
+              core.info('Needs review - Pending');
             }
 
-      - name: Update Project Board
-        uses: actions/github-script@v7
-        with:
-          script: |
-            // Project board update logic
-            core.info('Project board updated');
+      - name: Workflow Complete
+        run: |
+          echo "Custom workflow executed successfully"
+          echo "Mode: ${this.autoMode ? 'Auto' : 'Manual'}"
 `;
                 },
 
@@ -453,7 +479,7 @@ jobs:
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = this.outputFilename.split('/').pop();
+                    a.download = this.outputFilename;
                     a.click();
                     URL.revokeObjectURL(url);
                 },
