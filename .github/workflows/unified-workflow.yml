@@ -35,8 +35,6 @@ jobs:
             core.setOutput('label', label);
             core.setOutput('item_number', item?.number ?? 0);
 
-            core.info(`Type: ${isDiscussion ? 'Discussion' : 'Issue'}, Label: ${label}`);
-
       - name: Process APPROVED Label
         if: steps.check.outputs.label == 'approved' && steps.check.outputs.is_discussion == 'true'
         uses: actions/github-script@v7
@@ -44,7 +42,7 @@ jobs:
           script: |
             const discussion = context.payload.discussion;
 
-            const existingIssues = await github.rest.issues.listForRepo({
+            const issues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'all',
@@ -52,42 +50,39 @@ jobs:
               per_page: 100
             });
 
-            const alreadyCreated = existingIssues.data.find(issue =>
-              issue.body && issue.body.includes(discussion.html_url)
+            const exists = issues.data.find(i =>
+              i.body && i.body.includes(discussion.html_url)
             );
 
-            if (alreadyCreated) {
-              core.info(`Issue already exists: #${alreadyCreated.number}`);
-
+            if (exists) {
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: discussion.number,
-                body: `This discussion was already converted to issue #${alreadyCreated.number}`
+                body: `Already converted to issue #${exists.number}`
               });
-
               return;
             }
 
-            const issueBody = `
-## Original Discussion
-${discussion.html_url}
-
-----
-
-## Content (Automatically Transcribed)
-${discussion.body || '_No content provided_'}
-
-----
-
-## Related Wiki
-https://github.com/${context.repo.owner}/${context.repo.repo}/wiki/Design-Notes
-
-----
-
-**Status:** Open (Created from approved discussion)  
-**Next Step:** Backlog → Todo → Doing → Done
-`.trim();
+            const issueBody = [
+              '## Original Discussion',
+              discussion.html_url,
+              '',
+              '----',
+              '',
+              '## Content (Automatically Transcribed)',
+              discussion.body || '_No content provided_',
+              '',
+              '----',
+              '',
+              '## Related Wiki',
+              `https://github.com/${context.repo.owner}/${context.repo.repo}/wiki/Design-Notes`,
+              '',
+              '----',
+              '',
+              '**Status:** Open (Created from approved discussion)',
+              '**Next Step:** Backlog → Todo → Doing → Done'
+            ].join('\n');
 
             const newIssue = await github.rest.issues.create({
               owner: context.repo.owner,
@@ -122,15 +117,11 @@ https://github.com/${context.repo.owner}/${context.repo.repo}/wiki/Design-Notes
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: discussion.number,
-              body: `This discussion has been rejected and will be closed.`
+              body: 'This discussion has been rejected and will be closed.'
             });
 
             await github.graphql(
-              `mutation ($id: ID!) {
-                closeDiscussion(input: { discussionId: $id }) {
-                  discussion { id closed }
-                }
-              }`,
+              'mutation ($id: ID!) { closeDiscussion(input: { discussionId: $id }) { discussion { id closed } } }',
               { id: discussion.node_id }
             );
 
@@ -152,7 +143,7 @@ https://github.com/${context.repo.owner}/${context.repo.repo}/wiki/Design-Notes
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: discussion.number,
-              body: `This discussion is pending review.`
+              body: 'This discussion is pending review.'
             });
 
             await github.rest.issues.addLabels({
@@ -174,15 +165,10 @@ https://github.com/${context.repo.owner}/${context.repo.repo}/wiki/Design-Notes
         uses: actions/github-script@v7
         with:
           script: |
-            const label = '${{ steps.check.outputs.label }}';
-            const itemNum = '${{ steps.check.outputs.item_number }}';
-            const isDiscussion = '${{ steps.check.outputs.is_discussion }}' === 'true';
-
-            let summary = `# Workflow Execution Summary
-
-- Item Type: ${isDiscussion ? 'Discussion' : 'Issue'}
-- Item Number: #${itemNum}
-- Label Applied: ${label}
-`;
+            const summary =
+              '# Workflow Execution Summary\n\n' +
+              `- Item Type: ${'${{ steps.check.outputs.is_discussion }}' === 'true' ? 'Discussion' : 'Issue'}\n` +
+              `- Item Number: #${'${{ steps.check.outputs.item_number }}'}\n` +
+              `- Label Applied: ${'${{ steps.check.outputs.label }}'}\n`;
 
             core.summary.addRaw(summary).write();
