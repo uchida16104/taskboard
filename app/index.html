@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskBoard - Workflow Editor</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/response-targets.js"></script>
+    <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
+    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/dark.css">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
+    <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/motion@11.2.0/dist/motion.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * { font-family: 'Inter', sans-serif; }
+        html { scroll-behavior: smooth; }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        .nav-link { position: relative; transition: all 0.3s; }
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: white;
+            border-radius: 3px;
+        }
+        .nav-link:hover { transform: translateY(-2px); }
+        
+        [x-cloak] { display: none !important; }
+        
+        .mermaid-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+        
+        textarea.mermaid-input {
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 0, 0, 0.5);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .workflow-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .workflow-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+
+<body x-data="workflowApp()" x-init="init()" role="main">
+    
+    <div x-show="loading" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div id="loading-animation" style="width: 200px; height: 200px;"></div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+        
+        <header class="glass-effect rounded-2xl p-6 mb-8" data-aos="fade-down">
+            <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
+                <div class="flex items-center gap-4">
+                    <span class="iconify text-6xl text-white" data-icon="mdi:sitemap"></span>
+                    <div>
+                        <h1 class="text-4xl font-bold text-white mb-2">Workflow Editor</h1>
+                        <p class="text-white text-opacity-80">Define automated workflow with Mermaid</p>
+                    </div>
+                </div>
+                
+                <nav class="flex gap-4" role="navigation" aria-label="Main navigation">
+                    <a href="/TaskBoard/" class="nav-link px-6 py-3 rounded-xl text-white font-semibold glass-effect hover:bg-white hover:bg-opacity-20">
+                        <span class="iconify mr-2" data-icon="mdi:home"></span>Home
+                    </a>
+                    <a href="/TaskBoard/wiki/" class="nav-link px-6 py-3 rounded-xl text-white font-semibold glass-effect hover:bg-white hover:bg-opacity-20">
+                        <span class="iconify mr-2" data-icon="mdi:book-open-variant"></span>AI Prompts
+                    </a>
+                    <a href="/TaskBoard/docs/" class="nav-link px-6 py-3 rounded-xl text-white font-semibold glass-effect hover:bg-white hover:bg-opacity-20">
+                        <span class="iconify mr-2" data-icon="mdi:chart-box"></span>Status
+                    </a>
+                    <a href="/TaskBoard/app/" class="nav-link active px-6 py-3 rounded-xl text-white font-semibold glass-effect hover:bg-white hover:bg-opacity-20">
+                        <span class="iconify mr-2" data-icon="mdi:cog"></span>Workflow
+                    </a>
+                </nav>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            
+            <section class="glass-effect rounded-2xl p-8" data-aos="fade-right" aria-labelledby="editor-title">
+                <h2 id="editor-title" class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                    <span class="iconify" data-icon="mdi:pencil"></span>
+                    Workflow Definition (Mermaid)
+                </h2>
+                
+                <div class="mb-6">
+                    <label for="workflow-name" class="block text-white mb-2 font-semibold">Workflow Name</label>
+                    <input type="text" id="workflow-name" x-model="workflowName" 
+                           class="w-full px-4 py-3 rounded-lg glass-effect text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                           placeholder="e.g., Status Transition Workflow" aria-required="true">
+                </div>
+                
+                <div class="mb-6">
+                    <label for="mermaid-input" class="block text-white mb-2 font-semibold">Mermaid Flowchart</label>
+                    <textarea id="mermaid-input" x-model="mermaidCode" 
+                              class="mermaid-input w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" 
+                              rows="12" 
+                              placeholder="graph TB&#10;A[Start] --> B[Process]&#10;B --> C[End]"
+                              aria-required="true"></textarea>
+                </div>
+                
+                <div class="flex gap-4">
+                    <button @click="previewMermaid()" 
+                            class="flex-1 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+                            aria-label="Preview workflow diagram">
+                        <span class="iconify" data-icon="mdi:eye"></span>
+                        Preview
+                    </button>
+                    <button @click="generateWorkflow()" 
+                            class="flex-1 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+                            aria-label="Generate GitHub Actions workflow">
+                        <span class="iconify" data-icon="mdi:check"></span>
+                        Generate
+                    </button>
+                </div>
+
+                <div class="mt-6">
+                    <button @click="toggleMode()" 
+                            class="w-full px-6 py-3 glass-effect hover:bg-white hover:bg-opacity-20 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+                            aria-label="Toggle between auto and manual mode">
+                        <span class="iconify" data-icon="mdi:swap-horizontal"></span>
+                        <span x-text="autoMode ? 'Switch to Manual Mode' : 'Switch to Auto Mode'"></span>
+                    </button>
+                </div>
+            </section>
+
+            <section class="glass-effect rounded-2xl p-8" data-aos="fade-left" aria-labelledby="preview-title">
+                <h2 id="preview-title" class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                    <span class="iconify" data-icon="mdi:chart-sankey"></span>
+                    Workflow Preview
+                </h2>
+                
+                <div class="mermaid-container" x-show="showPreview" x-cloak>
+                    <div id="mermaid-preview" class="mermaid" x-text="mermaidCode"></div>
+                </div>
+                
+                <div x-show="!showPreview" class="text-center text-white text-opacity-60 py-12">
+                    <span class="iconify text-6xl mb-4" data-icon="mdi:chart-timeline"></span>
+                    <p>Click "Preview" to visualize your workflow</p>
+                </div>
+            </section>
+        </div>
+
+        <section class="glass-effect rounded-2xl p-8 mb-8" data-aos="fade-up" aria-labelledby="output-title" x-show="generatedYAML" x-cloak>
+            <h2 id="output-title" class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                <span class="iconify" data-icon="mdi:file-code"></span>
+                Generated GitHub Actions Workflow
+            </h2>
+            
+            <div class="mb-4 flex gap-4">
+                <input type="text" x-model="outputFilename" 
+                       class="flex-1 px-4 py-3 rounded-lg glass-effect text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                       placeholder=".github/workflows/custom-workflow.yml" aria-label="Output filename">
+                <button @click="copyYAML()" 
+                        class="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-xl font-semibold transition-all flex items-center gap-2"
+                        aria-label="Copy YAML to clipboard">
+                    <span class="iconify" data-icon="mdi:content-copy"></span>
+                    Copy
+                </button>
+                <button @click="downloadYAML()" 
+                        class="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-semibold transition-all flex items-center gap-2"
+                        aria-label="Download YAML file">
+                    <span class="iconify" data-icon="mdi:download"></span>
+                    Download
+                </button>
+            </div>
+            
+            <div class="bg-black bg-opacity-50 rounded-xl p-6 overflow-auto">
+                <pre class="text-white text-sm" x-text="generatedYAML"></pre>
+            </div>
+
+            <div x-show="yamlCopied" x-cloak 
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 transform scale-90"
+                 x-transition:enter-end="opacity-100 transform scale-100"
+                 class="mt-4 p-4 bg-green-500 text-white rounded-xl flex items-center gap-3" role="alert">
+                <span class="iconify text-2xl" data-icon="mdi:check-circle"></span>
+                <span>YAML copied to clipboard!</span>
+            </div>
+        </section>
+
+        <section class="glass-effect rounded-2xl p-8 mb-8" data-aos="fade-up" aria-labelledby="saved-title">
+            <h2 id="saved-title" class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                <span class="iconify" data-icon="mdi:history"></span>
+                Saved Workflows
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <template x-for="(workflow, index) in savedWorkflows" :key="index">
+                    <article class="workflow-card glass-effect rounded-xl p-6">
+                        <h3 class="text-white font-bold text-lg mb-2" x-text="workflow.name"></h3>
+                        <p class="text-white text-opacity-60 text-sm mb-4" x-text="'Created: ' + new Date(workflow.timestamp).toLocaleString()"></p>
+                        <div class="flex gap-2">
+                            <button @click="loadWorkflow(index)" 
+                                    class="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition-all"
+                                    aria-label="Load workflow">
+                                Load
+                            </button>
+                            <button @click="deleteWorkflow(index)" 
+                                    class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm transition-all"
+                                    aria-label="Delete workflow">
+                                <span class="iconify" data-icon="mdi:delete"></span>
+                            </button>
+                        </div>
+                    </article>
+                </template>
+            </div>
+            
+            <div x-show="savedWorkflows.length === 0" class="text-center text-white text-opacity-60 py-8">
+                <span class="iconify text-5xl mb-3" data-icon="mdi:inbox"></span>
+                <p>No saved workflows yet</p>
+            </div>
+        </section>
+
+        <footer class="glass-effect rounded-2xl p-6 text-center" data-aos="fade-up">
+            <div class="flex flex-col md:flex-row items-center justify-center gap-4 text-white text-opacity-80">
+                <span class="iconify text-2xl" data-icon="mdi:github"></span>
+                <p>TaskBoard System | Workflow Automation</p>
+                <span class="iconify text-2xl" data-icon="mdi:auto-fix"></span>
+                <p class="text-sm">Developer: Hirotoshi Uchida</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        function workflowApp() {
+            return {
+                loading: true,
+                workflowName: '',
+                mermaidCode: `graph TB
+A[💡 Idea] --> B[📝 Create Discussion]
+B --> C{🏷️ Label Selection}
+C -->|✅ Approved| D[📋 Open Task/Issue]
+C -->|❌ Rejected| E[🚫 Close Discussion]
+C -->|🤔 Needs Review| F[⏸️ Pending]
+D --> G[📊 Add to Project Board]
+G --> H[📦 Backlog]
+H --> I[📝 Todo]
+I --> J[⚙️ Doing]
+J --> K[✅ Done]`,
+                showPreview: false,
+                generatedYAML: '',
+                outputFilename: '.github/workflows/custom-workflow.yml',
+                yamlCopied: false,
+                savedWorkflows: [],
+                autoMode: true,
+
+                async init() {
+                    try {
+                        AOS.init({ duration: 1000, once: true, offset: 100 });
+                        
+                        const loadingEl = document.getElementById('loading-animation');
+                        if (loadingEl && window.lottie) {
+                            lottie.loadAnimation({
+                                container: loadingEl,
+                                renderer: 'svg',
+                                loop: true,
+                                autoplay: true,
+                                path: 'https://assets5.lottiefiles.com/packages/lf20_p8bfn5to.json'
+                            });
+                        }
+
+                        if (window.mermaid) {
+                            mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+                        }
+
+                        this.loadSavedWorkflows();
+                        this.loading = false;
+                    } catch (error) {
+                        console.error('Init error:', error);
+                        this.loading = false;
+                    }
+                },
+
+                async previewMermaid() {
+                    try {
+                        this.showPreview = true;
+                        await this.$nextTick();
+                        
+                        const previewEl = document.getElementById('mermaid-preview');
+                        if (previewEl && window.mermaid) {
+                            previewEl.removeAttribute('data-processed');
+                            await mermaid.run({ nodes: [previewEl] });
+                        }
+                    } catch (error) {
+                        console.error('Preview error:', error);
+                        alert('Mermaid syntax error. Please check your diagram code.');
+                    }
+                },
+
+                generateWorkflow() {
+                    if (!this.workflowName.trim()) {
+                        alert('Please enter a workflow name');
+                        return;
+                    }
+
+                    const yaml = this.generateYAMLFromMermaid();
+                    this.generatedYAML = yaml;
+
+                    const workflow = {
+                        name: this.workflowName,
+                        mermaid: this.mermaidCode,
+                        yaml: yaml,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    this.savedWorkflows.push(workflow);
+                    this.saveToStorage();
+
+                    if (window.Motion && Motion.animate) {
+                        const outputSection = document.querySelector('[aria-labelledby="output-title"]');
+                        if (outputSection) {
+                            Motion.animate(outputSection, 
+                                { opacity: [0, 1], transform: ['translateY(20px)', 'translateY(0)'] },
+                                { duration: 0.5 }
+                            );
+                        }
+                    }
+                },
+
+                generateYAMLFromMermaid() {
+                    const states = this.extractStatesFromMermaid();
+                    
+                    return `name: ${this.workflowName}
+
+on:
+  issues:
+    types: [opened, labeled, unlabeled]
+  discussion:
+    types: [labeled]
+
+permissions:
+  issues: write
+  discussions: write
+  contents: write
+
+jobs:
+  workflow-transition:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Process State Transition
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const context = require('@actions/github').context;
+            const item = context.payload.issue || context.payload.discussion;
+            
+            if (!item) {
+              core.setFailed('No issue or discussion found');
+              return;
+            }
+
+            const states = ${JSON.stringify(states, null, 12)};
+            
+            const currentLabels = item.labels.map(l => l.name);
+            const currentState = this.determineCurrentState(currentLabels);
+            
+            core.info(\`Current state: \${currentState}\`);
+            
+            // Auto transition logic based on Mermaid flow
+            const nextState = this.getNextState(currentState, states);
+            
+            if (nextState && this.autoMode) {
+              await this.transitionToState(github, context, item.number, nextState);
+            }
+
+      - name: Update Project Board
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Project board update logic
+            core.info('Project board updated');
+`;
+                },
+
+                extractStatesFromMermaid() {
+                    const lines = this.mermaidCode.split('\n');
+                    const states = [];
+                    
+                    lines.forEach(line => {
+                        const match = line.match(/([A-Z])\[(.*?)\]/);
+                        if (match) {
+                            states.push({
+                                id: match[1],
+                                name: match[2].replace(/[^\w\s]/g, '').trim()
+                            });
+                        }
+                    });
+                    
+                    return states;
+                },
+
+                async copyYAML() {
+                    try {
+                        await navigator.clipboard.writeText(this.generatedYAML);
+                        this.yamlCopied = true;
+                        setTimeout(() => { this.yamlCopied = false; }, 3000);
+                    } catch (error) {
+                        console.error('Copy failed:', error);
+                        alert('Failed to copy');
+                    }
+                },
+
+                downloadYAML() {
+                    const blob = new Blob([this.generatedYAML], { type: 'text/yaml' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = this.outputFilename.split('/').pop();
+                    a.click();
+                    URL.revokeObjectURL(url);
+                },
+
+                loadSavedWorkflows() {
+                    try {
+                        const saved = localStorage.getItem('taskboard_workflows');
+                        if (saved) {
+                            this.savedWorkflows = JSON.parse(saved);
+                        }
+                    } catch (error) {
+                        console.error('Load error:', error);
+                    }
+                },
+
+                saveToStorage() {
+                    try {
+                        localStorage.setItem('taskboard_workflows', JSON.stringify(this.savedWorkflows));
+                    } catch (error) {
+                        console.error('Save error:', error);
+                    }
+                },
+
+                loadWorkflow(index) {
+                    const workflow = this.savedWorkflows[index];
+                    this.workflowName = workflow.name;
+                    this.mermaidCode = workflow.mermaid;
+                    this.generatedYAML = workflow.yaml;
+                    this.showPreview = false;
+                },
+
+                deleteWorkflow(index) {
+                    if (confirm('Delete this workflow?')) {
+                        this.savedWorkflows.splice(index, 1);
+                        this.saveToStorage();
+                    }
+                },
+
+                toggleMode() {
+                    this.autoMode = !this.autoMode;
+                }
+            };
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Workflow Editor loaded');
+        });
+    </script>
+</body>
+</html>
