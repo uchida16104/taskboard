@@ -55,10 +55,10 @@ jobs:
             );
 
             if (exists) {
-              await github.rest.issues.createComment({
+              await github.rest.discussions.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: discussion.number,
+                discussion_number: discussion.number,
                 body: `Already converted to issue #${exists.number}`
               });
               return;
@@ -92,17 +92,17 @@ jobs:
               labels: ['from-discussion', 'status:open']
             });
 
-            await github.rest.issues.createComment({
+            await github.rest.discussions.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: discussion.number,
+              discussion_number: discussion.number,
               body: `Approved and converted to issue #${newIssue.data.number}`
             });
 
-            await github.rest.issues.addLabels({
+            await github.rest.discussions.addLabelsToDiscussion({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: discussion.number,
+              discussion_number: discussion.number,
               labels: ['converted-to-issue']
             });
 
@@ -113,10 +113,10 @@ jobs:
           script: |
             const discussion = context.payload.discussion;
 
-            await github.rest.issues.createComment({
+            await github.rest.discussions.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: discussion.number,
+              discussion_number: discussion.number,
               body: 'This discussion has been rejected and will be closed.'
             });
 
@@ -125,10 +125,10 @@ jobs:
               { id: discussion.node_id }
             );
 
-            await github.rest.issues.addLabels({
+            await github.rest.discussions.addLabelsToDiscussion({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: discussion.number,
+              discussion_number: discussion.number,
               labels: ['rejected-closed']
             });
 
@@ -139,17 +139,17 @@ jobs:
           script: |
             const discussion = context.payload.discussion;
 
-            await github.rest.issues.createComment({
+            await github.rest.discussions.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: discussion.number,
+              discussion_number: discussion.number,
               body: 'This discussion is pending review.'
             });
 
-            await github.rest.issues.addLabels({
+            await github.rest.discussions.addLabelsToDiscussion({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: discussion.number,
+              discussion_number: discussion.number,
               labels: ['pending-review']
             });
 
