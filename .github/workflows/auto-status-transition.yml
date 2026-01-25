@@ -1,0 +1,168 @@
+name: Auto Status Transition
+
+on:
+  issues:
+    types: [opened, labeled, unlabeled, edited]
+  discussion:
+    types: [labeled, created]
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  discussions: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-transition:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine Current State
+        id: state
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const item = context.payload.issue || context.payload.discussion;
+            
+            if (!item) {
+              core.setFailed('No item found');
+              return;
+            }
+
+            const labels = (item.labels || []).map(l => typeof l === 'string' ? l : l.name);
+            
+            let state = 'unknown';
+            if (labels.includes('approved')) state = 'open';
+            else if (labels.includes('rejected')) state = 'closed';
+            else if (labels.includes('needs-review')) state = 'pending';
+            
+            core.setOutput('current_state', state);
+            core.setOutput('item_number', item.number);
+            core.setOutput('item_type', context.payload.issue ? 'issue' : 'discussion');
+            
+            core.info(`Current state: ${state}`);
+
+      - name: Transition to Open (Approved)
+        if: steps.state.outputs.current_state == 'open'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const itemNumber = ${{ steps.state.outputs.item_number }};
+            const itemType = '${{ steps.state.outputs.item_type }}';
+            
+            if (itemType === 'discussion') {
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: context.payload.discussion.title,
+                body: `## Original Discussion\n${context.payload.discussion.html_url}\n\n---\n\n${context.payload.discussion.body}`,
+                labels: ['from-discussion', 'status:open']
+              });
+              
+              core.info(`Issue created: #${issue.data.number}`);
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.discussion.number,
+                body: `✅ Approved! Issue #${issue.data.number} created and added to project board with status: **Open**`
+              });
+            } else {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: itemNumber,
+                state: 'open'
+              });
+              
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: itemNumber,
+                labels: ['status:open']
+              });
+            }
+
+      - name: Transition to Closed (Rejected)
+        if: steps.state.outputs.current_state == 'closed'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const itemNumber = ${{ steps.state.outputs.item_number }};
+            const itemType = '${{ steps.state.outputs.item_type }}';
+            
+            if (itemType === 'discussion') {
+              const discussionId = context.payload.discussion.node_id;
+              
+              await github.graphql(`
+                mutation CloseDiscussion($id: ID!) {
+                  closeDiscussion(input: { discussionId: $id }) {
+                    discussion {
+                      id
+                      closed
+                    }
+                  }
+                }
+              `, { id: discussionId });
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: itemNumber,
+                body: '❌ Rejected. Discussion closed with status: **Closed**'
+              });
+            } else {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: itemNumber,
+                state: 'closed',
+                state_reason: 'not_planned'
+              });
+              
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: itemNumber,
+                labels: ['status:closed']
+              });
+            }
+
+      - name: Transition to Pending (Needs Review)
+        if: steps.state.outputs.current_state == 'pending'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const itemNumber = ${{ steps.state.outputs.item_number }};
+            const itemType = '${{ steps.state.outputs.item_type }}';
+            
+            if (itemType === 'discussion') {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: itemNumber,
+                body: '🤔 Needs review. Status: **Pending**'
+              });
+            } else {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: itemNumber,
+                labels: ['status:pending']
+              });
+            }
+
+      - name: Update Project Board
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          github-token: ${{ secrets.GH_PAT }}
+          script: |
+            const state = '${{ steps.state.outputs.current_state }}';
+            const itemNumber = ${{ steps.state.outputs.item_number }};
+            
+            core.info(`Updating project board for item #${itemNumber} with state: ${state}`);
